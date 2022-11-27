@@ -19,7 +19,7 @@ Once you enter the crypt the plugin will highlight all NPCs that would not put y
 
 ## Known Issues
 
-If you are targeting **only** Ahrim or Karil the plugin will create a plan with a score of 865 (Giant crypt spider x9, Crypt spider x1) despite a plan of 878 being possible (Giant crypt spider x7, Crypt spider x1, Giant crypt rat x1, Crypt rat x1, Bloodworm x1). This is due to the plugin requiring 64 iterations to reach the optimal plan but it is limited to 20 for performance reasons. If this is a concern you should start by killing Giant crypt spiders. Once you kill enough the plugin will correct iteself.
+If you are targeting **only** Ahrim or Karil the plugin will create a plan with a score of 865 (Giant crypt spider x9, Crypt spider x1) despite a plan of 880 being possible (Giant crypt spider x7, Crypt spider x1, Giant crypt rat x1, Crypt rat x1, Bloodworm x1). This is due to the plugin requiring 64 iterations to reach the optimal plan but it is limited to 20 for performance reasons. If this is a concern you should start by killing Giant crypt spiders. Once you kill enough the plugin will correct iteself.
 
 ## How It Works
 
