@@ -47,6 +47,8 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Inject
 	private ClientThread clientThread;
 
+	private boolean updateQueued = false;
+
 	private final RewardPlanner planner = new RewardPlanner();
 
 	private final HashSet<Monster> npcTargets = new HashSet<>();
@@ -104,10 +106,12 @@ public class BarrowsPotentialPlugin extends Plugin
 		// @todo: how to prevent this from running twice when you kill a brother?
 		// BARROWS_REWARD_POTENTIAL runs and then the brother's varbit runs
 
+		boolean wantsUpdate = event.getVarbitId() == Varbits.BARROWS_REWARD_POTENTIAL;
+
 		if ( event.getVarbitId() == Varbits.BARROWS_REWARD_POTENTIAL )
 		{
 			log.debug( "reward potential changed" );
-			updatePlan();
+			wantsUpdate = true;
 		}
 		else
 		{
@@ -115,8 +119,13 @@ public class BarrowsPotentialPlugin extends Plugin
 			if ( monster != null )
 			{
 				log.debug( "killed {}", monster.getDisplayName() );
-				updatePlan();
+				wantsUpdate = true;
 			}
+		}
+
+		if ( wantsUpdate )
+		{
+			queueUpdate();
 		}
 	}
 
@@ -129,7 +138,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			if ( isInCrypt() )
 			{
 				log.debug( "entered crypt" );
-				updatePlan();
+				queueUpdate();
 				return;
 			}
 
@@ -144,7 +153,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		{
 			log.debug( "config changed" );
 
-			clientThread.invoke( this::updatePlan );
+			queueUpdate();
 		}
 	}
 
@@ -173,9 +182,19 @@ public class BarrowsPotentialPlugin extends Plugin
 		return new RewardPlan( monsters );
 	}
 
+	private void queueUpdate()
+	{
+		if ( !updateQueued )
+			clientThread.invokeLater( this::updatePlan );
+
+		updateQueued = true;
+	}
+
 	private void updatePlan()
 	{
 		assert ( client.isClientThread() );
+
+		updateQueued = false;
 
 		npcTargets.clear();
 		optimalNpcTargets.clear();
