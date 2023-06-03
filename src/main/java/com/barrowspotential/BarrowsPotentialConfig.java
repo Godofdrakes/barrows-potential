@@ -119,7 +119,7 @@ public interface BarrowsPotentialConfig extends Config
         name = "Overlay Optimal NPCs",
         description = "List optimal NPCs in an overlay",
         section = highlightSection,
-        position = 2
+        position = 3
     )
     default boolean overlayOptimal() { return true; }
 
