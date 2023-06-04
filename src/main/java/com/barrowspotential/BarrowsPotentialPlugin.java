@@ -1,5 +1,6 @@
 package com.barrowspotential;
 
+import com.google.common.collect.ImmutableSet;
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
@@ -157,6 +158,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		}
 	}
 
+	// get the user's base plan, which we will add crypt monsters to
 	private RewardPlan getBasePlan()
 	{
 		Map<Monster,Integer> monsters = new HashMap<>();
@@ -182,6 +184,22 @@ public class BarrowsPotentialPlugin extends Plugin
 		return new RewardPlan( monsters );
 	}
 
+	// get the set of monsters the user wants to plan around
+	private static Set<Monster> getMonstersToTarget( BarrowsPotentialConfig config )
+	{
+		Set<Monster> monsters = new HashSet<>();
+
+		if ( config.killCryptRat() ) monsters.add( Monster.CryptRat );
+		if ( config.killBloodworm() ) monsters.add( Monster.Bloodworm );
+		if ( config.killCryptSpider() ) monsters.add( Monster.CryptSpider );
+		if ( config.killGiantCryptRat() ) monsters.add( Monster.GiantCryptRat );
+		if ( config.killSkeleton() ) monsters.add( Monster.Skeleton );
+		if ( config.killGiantCryptSpider() ) monsters.add( Monster.GiantCryptSpider );
+
+		return ImmutableSet.copyOf( monsters );
+	}
+
+	// queue an update to the plan if one hasn't been queued already
 	private void queueUpdate()
 	{
 		if ( !updateQueued )
@@ -199,6 +217,8 @@ public class BarrowsPotentialPlugin extends Plugin
 		npcTargets.clear();
 		optimalNpcTargets.clear();
 		overlayManager.remove( overlay );
+
+		planner.monstersToTarget = getMonstersToTarget( config );
 
 		RewardTarget rewardTarget = config.rewardTarget();
 
@@ -226,7 +246,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		// Highlight all monsters that don't exceed the goal
 		if ( config.highlightNpc() )
 		{
-			for ( Monster monster : Monster.cryptMonsters )
+			for ( Monster monster : planner.monstersToTarget )
 			{
 				if ( rewardPotential + basePotential + monster.getCombatLevel() > targetPotential )
 					continue;

@@ -87,6 +87,62 @@ public interface BarrowsPotentialConfig extends Config
     )
     default boolean killVerac() { return true; }
 
+    // @todo enum flags would make this killX stuff a lot more concise
+
+    @ConfigItem(
+        keyName = "killCryptRat",
+        name = "Kill Crypt Rats",
+        description = "",
+        section = plannerSection,
+        position = 7
+    )
+    default boolean killCryptRat() { return true; }
+
+    @ConfigItem(
+        keyName = "killBloodworm",
+        name = "Kill Bloodworms",
+        description = "",
+        section = plannerSection,
+        position = 8
+    )
+    default boolean killBloodworm() { return true; }
+
+    @ConfigItem(
+        keyName = "killCryptSpider",
+        name = "Kill Crypt Spiders",
+        description = "",
+        section = plannerSection,
+        position = 9
+    )
+    default boolean killCryptSpider() { return true; }
+
+    @ConfigItem(
+        keyName = "killGiantCryptRat",
+        name = "Kill Giant Crypt Rats",
+        description = "",
+        section = plannerSection,
+        position = 10
+    )
+    default boolean killGiantCryptRat() { return true; }
+
+    @ConfigItem(
+        keyName = "killSkeleton",
+        name = "Kill Skeletons",
+        description = "",
+        section = plannerSection,
+        position = 11
+    )
+    default boolean killSkeleton() { return true; }
+
+    @ConfigItem(
+        keyName = "killGiantCryptSpider",
+        name = "Kill Giant Crypt Spiders",
+        description = "",
+        section = plannerSection,
+        position = 12
+    )
+    default boolean killGiantCryptSpider() { return true; }
+
     @ConfigItem(
         keyName = "highlightNpcs",
         name = "Highlight NPCs",
