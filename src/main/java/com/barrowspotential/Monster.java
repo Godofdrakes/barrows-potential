@@ -58,6 +58,12 @@ public enum Monster
 		this( displayName, combatLevel, new int[] { npcID }, varbit );
 	}
 
+	@Override
+	public String toString()
+	{
+		return displayName;
+	}
+
 	private final String displayName;
 	private final int combatLevel;
 	private final int[] npcIDs;
