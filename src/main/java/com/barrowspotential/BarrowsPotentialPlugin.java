@@ -158,45 +158,42 @@ public class BarrowsPotentialPlugin extends Plugin
 		}
 	}
 
+	private boolean isBrotherDefeated( Monster target )
+	{
+		assert target.isBrother();
+		return client.getVarbitValue( target.getVarbit() ) == 1;
+	}
+
 	// get the user's base plan, which we will add crypt monsters to
 	private RewardPlan getBasePlan()
 	{
+		final Set<Monster> configPlan = config.rewardPlan();
+
 		Map<Monster,Integer> monsters = new HashMap<>();
 
-		if ( config.killAhrim() && client.getVarbitValue( Monster.Ahrim.getVarbit() ) == 0 )
-			monsters.put( Monster.Ahrim, 1 );
+		// add all brothers that we haven't yet defeated to the plan
+		for ( Monster brother : Monster.brothers )
+		{
+			if ( !configPlan.contains( brother ) )
+				continue;
 
-		if ( config.killDharok() && client.getVarbitValue( Monster.Dharok.getVarbit() ) == 0 )
-			monsters.put( Monster.Dharok, 1 );
+			if ( isBrotherDefeated( brother ) )
+				continue;
 
-		if ( config.killGuthan() && client.getVarbitValue( Monster.Guthan.getVarbit() ) == 0 )
-			monsters.put( Monster.Guthan, 1 );
-
-		if ( config.killKaril() && client.getVarbitValue( Monster.Karil.getVarbit() ) == 0 )
-			monsters.put( Monster.Karil, 1 );
-
-		if ( config.killTorag() && client.getVarbitValue( Monster.Torag.getVarbit() ) == 0 )
-			monsters.put( Monster.Torag, 1 );
-
-		if ( config.killVerac() && client.getVarbitValue( Monster.Verac.getVarbit() ) == 0 )
-			monsters.put( Monster.Verac, 1 );
+			monsters.put( brother, 1 );
+		}
 
 		return new RewardPlan( monsters );
 	}
 
 	// get the set of monsters the user wants to plan around
-	private static Set<Monster> getMonstersToTarget( BarrowsPotentialConfig config )
+	private Set<Monster> getMonstersToTarget()
 	{
-		Set<Monster> monsters = new HashSet<>();
+		Set<Monster> monsters = new HashSet<>( config.rewardPlan() );
 
-		if ( config.killCryptRat() ) monsters.add( Monster.CryptRat );
-		if ( config.killBloodworm() ) monsters.add( Monster.Bloodworm );
-		if ( config.killCryptSpider() ) monsters.add( Monster.CryptSpider );
-		if ( config.killGiantCryptRat() ) monsters.add( Monster.GiantCryptRat );
-		if ( config.killSkeleton() ) monsters.add( Monster.Skeleton );
-		if ( config.killGiantCryptSpider() ) monsters.add( Monster.GiantCryptSpider );
+		monsters.retainAll( Monster.cryptMonsters );
 
-		return ImmutableSet.copyOf( monsters );
+		return monsters;
 	}
 
 	// queue an update to the plan if one hasn't been queued already
@@ -218,7 +215,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		optimalNpcTargets.clear();
 		overlayManager.remove( overlay );
 
-		planner.monstersToTarget = getMonstersToTarget( config );
+		planner.monstersToTarget = getMonstersToTarget();
 
 		RewardTarget rewardTarget = config.rewardTarget();
 
@@ -365,10 +362,10 @@ public class BarrowsPotentialPlugin extends Plugin
 	{
 		int value = client.getVarbitValue( Varbits.BARROWS_REWARD_POTENTIAL );
 
-		for ( Map.Entry<Integer,Monster> entry : Monster.brothersByVarbit.entrySet() )
+		for ( Monster brother : Monster.brothers )
 		{
 			// each brother adds 2 to the final reward potential
-			if ( client.getVarbitValue( entry.getKey() ) == 1 )
+			if ( isBrotherDefeated( brother ) )
 			{
 				value += 2;
 			}

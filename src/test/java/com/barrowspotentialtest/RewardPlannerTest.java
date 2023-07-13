@@ -8,6 +8,7 @@ import junit.framework.TestCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -29,6 +30,9 @@ public class RewardPlannerTest extends TestCase
 
 	private static RewardPlan AllBrothersOptimalBloodRune()
 	{
+		// The optimal plan is 1 giant crypt spider, 1 skeleton, and 1 crypt spider (880 points)
+		// 3 bloodworms and 1 crypt spider is also 880 points but is more steps, and therefor not optimal
+
 		Map<Monster,Integer> map = new HashMap<>();
 		map.put( Monster.Ahrim, 1 );
 		map.put( Monster.Dharok, 1 );
@@ -36,12 +40,23 @@ public class RewardPlannerTest extends TestCase
 		map.put( Monster.Karil, 1 );
 		map.put( Monster.Torag, 1 );
 		map.put( Monster.Verac, 1 );
-
-		// The optimal plan is 1 giant crypt spider, 1 skeleton, and 1 crypt spider (880 points)
-		// 3 bloodworms and 1 crypt spider is also 880 points but is more steps, and therefor not optimal
 		map.put( Monster.GiantCryptSpider, 1 );
 		map.put( Monster.Skeleton, 1 );
 		map.put( Monster.CryptSpider, 1 );
+		return new RewardPlan( map );
+	}
+
+	private static RewardPlan AllBrothersSkeletonBloodworm()
+	{
+		Map<Monster,Integer> map = new HashMap<>();
+		map.put( Monster.Ahrim, 1 );
+		map.put( Monster.Dharok, 1 );
+		map.put( Monster.Guthan, 1 );
+		map.put( Monster.Karil, 1 );
+		map.put( Monster.Torag, 1 );
+		map.put( Monster.Verac, 1 );
+		map.put( Monster.Skeleton, 2 );
+		map.put( Monster.Bloodworm, 1 );
 		return new RewardPlan( map );
 	}
 
@@ -61,6 +76,11 @@ public class RewardPlannerTest extends TestCase
 
 			steps += count;
 			score += value;
+
+			if ( entry.getKey().isBrother() )
+			{
+				score += 2;
+			}
 		}
 
 		logger.info( "Steps: {}", steps );
@@ -86,11 +106,11 @@ public class RewardPlannerTest extends TestCase
 	}
 
 	// assert that for the given base plan there is an optimal plan to reach the target
-	private static RewardPlan assertOptimalPlan( Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
+	private static RewardPlan assertOptimalPlan( RewardPlanner planner, Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
 	{
-		logger.info( "searching for optimal plan" );
+		assert planner != null;
 
-		RewardPlanner planner = new RewardPlanner();
+		logger.info( "searching for optimal plan" );
 
 		planner.mode = rewardTarget.getMaxValue() < Integer.MAX_VALUE
 			? RewardPlanner.Mode.NEAREST
@@ -114,15 +134,16 @@ public class RewardPlannerTest extends TestCase
 	}
 
 	// assert that for the given base plan there is a valid plan to reach the target within 20 iterations
-	private static RewardPlan assertValidPlan( Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
+	private static RewardPlan assertValidPlan( RewardPlanner planner, Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
 	{
-		logger.info( "searching for valid plan" );
+		assert planner != null;
 
-		RewardPlanner planner = new RewardPlanner();
+		logger.info( "searching for valid plan" );
 
 		planner.mode = rewardTarget.getMaxValue() < Integer.MAX_VALUE
 			? RewardPlanner.Mode.NEAREST
 			: RewardPlanner.Mode.ANY;
+
 		planner.reset( basePlan, rewardTarget.getMaxValue() < Integer.MAX_VALUE
 			? rewardTarget.getMaxValue()
 			: rewardTarget.getMinValue() );
@@ -161,31 +182,37 @@ public class RewardPlannerTest extends TestCase
 
 	public void testOptimalKillAll()
 	{
+		RewardPlanner planner = new RewardPlanner();
+
 		RewardPlan allBrothers = AllBrothers();
-		RewardPlan plan = assertOptimalPlan( logger, RewardTarget.BloodRune, allBrothers );
+		RewardPlan plan = assertOptimalPlan( planner, logger, RewardTarget.BloodRune, allBrothers );
 
 		assertEquals( "plan does not match known optimal plan",
 			AllBrothersOptimalBloodRune(),
 			plan );
 
-		assertValidPlan( logger, RewardTarget.DragonMed, allBrothers );
+		assertValidPlan( planner, logger, RewardTarget.DragonMed, allBrothers );
 	}
 
 	public void testOptimalKillSingle()
 	{
+		RewardPlanner planner = new RewardPlanner();
+
 		RewardPlan combatLevel98 = RewardPlan.Create( Monster.Ahrim );
 		RewardPlan combatLevel115 = RewardPlan.Create( Monster.Dharok );
 
-		assertOptimalPlan( logger, RewardTarget.BloodRune, combatLevel98 );
-		assertOptimalPlan( logger, RewardTarget.BloodRune, combatLevel115 );
-		assertValidPlan( logger, RewardTarget.BloodRune, combatLevel98 );
-		assertValidPlan( logger, RewardTarget.BloodRune, combatLevel115 );
-		assertValidPlan( logger, RewardTarget.DragonMed, combatLevel98 );
-		assertValidPlan( logger, RewardTarget.DragonMed, combatLevel115 );
+		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel98 );
+		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel115 );
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, combatLevel98 );
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, combatLevel115 );
+		assertValidPlan( planner, logger, RewardTarget.DragonMed, combatLevel98 );
+		assertValidPlan( planner, logger, RewardTarget.DragonMed, combatLevel115 );
 	}
 
 	public void testOptimalKillPartial()
 	{
+		RewardPlanner planner = new RewardPlanner();
+
 		RewardPlan combatLevel98 = RewardPlan.Create(
 			//Monster.Ahrim, // combat level 98
 			Monster.Dharok,
@@ -203,11 +230,35 @@ public class RewardPlannerTest extends TestCase
 			Monster.Verac
 		);
 
-		assertOptimalPlan( logger, RewardTarget.BloodRune, combatLevel98 );
-		assertOptimalPlan( logger, RewardTarget.BloodRune, combatLevel115 );
-		assertValidPlan( logger, RewardTarget.BloodRune, combatLevel98 );
-		assertValidPlan( logger, RewardTarget.BloodRune, combatLevel115 );
-		assertValidPlan( logger, RewardTarget.DragonMed, combatLevel98 );
-		assertValidPlan( logger, RewardTarget.DragonMed, combatLevel115 );
+		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel98 );
+		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel115 );
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, combatLevel98 );
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, combatLevel115 );
+		assertValidPlan( planner, logger, RewardTarget.DragonMed, combatLevel98 );
+		assertValidPlan( planner, logger, RewardTarget.DragonMed, combatLevel115 );
+	}
+
+	// this is here because I was trying to figure out why restricting to skele+blood was planning blood x4
+	// it's because blood x4 is 876, skele x2 + blood x1 is only 874. blood x4 is "more optimal"
+	// leaving it here because it's useful for debugging if I decide to change the heuristic
+	public void testSkeletonBloodworm()
+	{
+		RewardPlanner planner = new RewardPlanner();
+
+		planner.monstersToTarget = EnumSet.of(
+			Monster.Skeleton,
+			Monster.Bloodworm
+		);
+
+		RewardPlan basePlan = RewardPlan.Create(
+			Monster.Ahrim,
+			Monster.Dharok,
+			Monster.Guthan,
+			Monster.Karil,
+			Monster.Torag,
+			Monster.Verac
+		);
+
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
 	}
 }

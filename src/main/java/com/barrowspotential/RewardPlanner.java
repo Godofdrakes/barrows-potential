@@ -16,8 +16,6 @@ public class RewardPlanner extends AStar<RewardPlan,Integer>
 		ANY,
 	}
 
-	public final HashSet<Monster> ignoredMonsters = new HashSet<>();
-
 	public Mode mode = Mode.NEAREST;
 
 	public Set<Monster> monstersToTarget = Monster.cryptMonsters;
@@ -60,9 +58,6 @@ public class RewardPlanner extends AStar<RewardPlan,Integer>
 
 		for ( Monster monster : monstersToTarget )
 		{
-			if ( ignoredMonsters.contains( monster ) )
-				continue;
-
 			// skip crypt monsters that would put us over the target score
 			if ( mode == Mode.NEAREST && currentValue + monster.getCombatLevel() > target )
 				continue;

@@ -40,16 +40,19 @@ public enum Monster
 		} ),
 	GiantCryptSpider( "Giant crypt spider", 79, NpcID.GIANT_CRYPT_SPIDER );
 
+	// constructor for monsters with only one npcID
 	Monster( String displayName, int combatLevel, int npcID )
 	{
 		this( displayName, combatLevel, npcID, 0 );
 	}
 
+	// constructor for crypt monsters with multiple npcIDs
 	Monster( String displayName, int combatLevel, int[] npcIDs )
 	{
 		this( displayName, combatLevel, npcIDs, 0 );
 	}
 
+	// constructor for brothers
 	Monster( String displayName, int combatLevel, int npcID, int varbit )
 	{
 		this( displayName, combatLevel, new int[] { npcID }, varbit );
@@ -69,10 +72,9 @@ public enum Monster
 	{
 		HashMap<Integer,Monster> map = new HashMap<>();
 
-		for ( Monster monster : Monster.values() )
+		for ( Monster monster : Monster.cryptMonsters )
 		{
-			if ( monster.isBrother() )
-				continue;
+			assert !monster.isBrother();
 
 			for ( int npcID : monster.getNpcIDs() )
 			{
@@ -87,10 +89,9 @@ public enum Monster
 	{
 		HashMap<Integer,Monster> map = new HashMap<>();
 
-		for ( Monster monster : Monster.values() )
+		for ( Monster monster : Monster.brothers )
 		{
-			if ( !monster.isBrother() )
-				continue;
+			assert monster.isBrother();
 
 			map.put( monster.getVarbit(), monster );
 		}
