@@ -35,7 +35,7 @@ public interface BarrowsPotentialConfig extends Config
 	@ConfigItem(
 		keyName = "rewardPlan",
 		name = "Reward Plan",
-		description = "Which monsters do you plan on defeating?",
+		description = "Which monsters do you plan on defeating? Ctrl+Click to select.",
 		section = plannerSection,
 		position = 1
 	)
