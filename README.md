@@ -28,3 +28,16 @@ If you are trying to follow the "Skeleton x2, Bloodworm x1" plan and deselect al
 ## How It Works
 
 The plugin uses an implementation of the A* algorithm to search for a plan that maximizes reward potential. Each iteration of the search will select the plan that is nearest to the reward target and then generate new plans that attempt to get even closer while not going past the upper bounds of the reward target. When you kill a brother or NPC in the crypt the planner is run for 20 iterations. If an optimal plan cannot be found after that the plugin takes the best sub-opimtal plan the planner could find.
+
+## Changelog
+
+### Version 1
+
+* Release
+
+### Version 2 
+
+* Added change notification for plugin updates
+  * Happens once per update
+* Added support for selecting which monsters to consider for the planner
+  * If you just want to do "Sleke x2, Blood x1" every time you can do that now
