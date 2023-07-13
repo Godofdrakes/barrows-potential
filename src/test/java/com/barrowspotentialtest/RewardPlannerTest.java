@@ -46,20 +46,6 @@ public class RewardPlannerTest extends TestCase
 		return new RewardPlan( map );
 	}
 
-	private static RewardPlan AllBrothersSkeletonBloodworm()
-	{
-		Map<Monster,Integer> map = new HashMap<>();
-		map.put( Monster.Ahrim, 1 );
-		map.put( Monster.Dharok, 1 );
-		map.put( Monster.Guthan, 1 );
-		map.put( Monster.Karil, 1 );
-		map.put( Monster.Torag, 1 );
-		map.put( Monster.Verac, 1 );
-		map.put( Monster.Skeleton, 2 );
-		map.put( Monster.Bloodworm, 1 );
-		return new RewardPlan( map );
-	}
-
 	private static void LogPlan( Logger logger, RewardPlan plan )
 	{
 		assert ( plan != null );
