@@ -6,9 +6,13 @@ import java.awt.*;
 import java.util.EnumSet;
 import java.util.Set;
 
-@ConfigGroup( "barrowspotential" )
+@ConfigGroup( BarrowsPotentialConfig.CONFIG_GROUP )
 public interface BarrowsPotentialConfig extends Config
 {
+	String CONFIG_GROUP = "barrowspotential";
+
+	String CONFIG_VERSION = "version";
+
 	@ConfigSection(
 		name = "Planner",
 		description = "",

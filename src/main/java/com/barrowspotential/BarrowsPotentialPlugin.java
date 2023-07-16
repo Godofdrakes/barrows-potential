@@ -6,6 +6,10 @@ import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
 import net.runelite.client.callback.ClientThread;
+import net.runelite.client.chat.ChatColorType;
+import net.runelite.client.chat.ChatMessageBuilder;
+import net.runelite.client.chat.ChatMessageManager;
+import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
@@ -35,8 +39,14 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
+	private static final int PLUGIN_VERSION = 2;
+	private static final int PLUGIN_VERSION_RELEASE = 1;
+
 	@Inject
 	private Client client;
+
+	@Inject
+	private ConfigManager configManager;
 
 	@Inject
 	private BarrowsPotentialConfig config;
@@ -49,6 +59,9 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	@Inject
 	private NpcOverlayService npcOverlayService;
+
+	@Inject
+	private ChatMessageManager chatMessageManager;
 
 	@Inject
 	private ClientThread clientThread;
@@ -141,6 +154,8 @@ public class BarrowsPotentialPlugin extends Plugin
 		// runs when loading into the crypt, check region id
 		if ( event.getGameState() == GameState.LOGGED_IN )
 		{
+			updateCheck();
+
 			if ( isInCrypt() )
 			{
 				log.debug( "entered crypt" );
@@ -377,6 +392,50 @@ public class BarrowsPotentialPlugin extends Plugin
 		}
 
 		return value;
+	}
+
+	// Check if the plugin has updated since the last time the user logged in
+	// queue a message notifying of changes if so
+	private void updateCheck()
+	{
+		Integer version = configManager.getRSProfileConfiguration(
+			BarrowsPotentialConfig.CONFIG_GROUP,
+			BarrowsPotentialConfig.CONFIG_VERSION,
+			int.class );
+
+		if (version == null)
+		{
+			log.debug( "last plugin version unknown. assuming release." );
+
+			version = PLUGIN_VERSION_RELEASE;
+		}
+
+		log.debug( "last plugin version: {}", version );
+		log.debug( "latest plugin version: {}", PLUGIN_VERSION );
+
+		if ( version >= PLUGIN_VERSION )
+		{
+			return;
+		}
+
+		log.debug( "plugin version changed. queuing update message." );
+
+		final String message = "Barrows Potential has been updated. See Github page for details.";
+
+		final String chatMessage = new ChatMessageBuilder()
+			.append( ChatColorType.HIGHLIGHT )
+			.append( message )
+			.build();
+
+		chatMessageManager.queue( QueuedMessage.builder()
+			.type( ChatMessageType.CONSOLE )
+			.runeLiteFormattedMessage( chatMessage )
+			.build() );
+
+		configManager.setRSProfileConfiguration(
+			BarrowsPotentialConfig.CONFIG_GROUP,
+			BarrowsPotentialConfig.CONFIG_VERSION,
+			PLUGIN_VERSION );
 	}
 
 	@Provides
