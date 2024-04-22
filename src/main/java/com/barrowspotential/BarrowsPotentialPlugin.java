@@ -105,6 +105,22 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		return null;
 	}
+	
+	private void showOverlay()
+	{
+		if ( overlayManager.add( overlay ) )
+		{
+			log.debug( "overlay visible" );
+		}
+	}
+	
+	private void hideOverlay()
+	{
+		if ( overlayManager.remove( overlay ) )
+		{
+			log.debug( "overlay hidden" );
+		}
+	}
 
 	@Override
 	protected void startUp()
@@ -115,8 +131,9 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
-		overlayManager.remove( overlay );
 		npcOverlayService.unregisterHighlighter( this::getHighlightForNpc );
+
+		hideOverlay();
 	}
 
 	@Subscribe
@@ -154,16 +171,10 @@ public class BarrowsPotentialPlugin extends Plugin
 		// runs when loading into the crypt, check region id
 		if ( event.getGameState() == GameState.LOGGED_IN )
 		{
+			log.debug( "logged in" );
+
 			updateCheck();
-
-			if ( isInCrypt() )
-			{
-				log.debug( "entered crypt" );
-				queueUpdate();
-				return;
-			}
-
-			overlayManager.remove( overlay );
+			queueUpdate();
 		}
 	}
 
@@ -231,9 +242,17 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		updateQueued = false;
 
+		hideOverlay();
+
+		if ( !isInCrypt() )
+		{
+			// Guard against running this outside of the crypt.
+			// If executes further it could show the overlay in places it shouldn't.
+			return;
+		}
+
 		npcTargets.clear();
 		optimalNpcTargets.clear();
-		overlayManager.remove( overlay );
 
 		planner.monstersToTarget = getMonstersToTarget();
 
@@ -346,7 +365,7 @@ public class BarrowsPotentialPlugin extends Plugin
 				{
 					overlay.setOptimalMonsters( plan.monsters );
 					overlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
-					overlayManager.add( overlay );
+					showOverlay();
 				}
 
 				for ( Map.Entry<Monster,Integer> entry : plan.monsters.entrySet() )
