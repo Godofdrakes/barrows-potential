@@ -5,7 +5,6 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
-import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -64,18 +63,13 @@ public class BarrowsPotentialPlugin extends Plugin
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
-	private ClientThread clientThread;
-
-	private boolean updateQueued = false;
+	private ClientThreadMarshal clientThreadMarshal;
 
 	private final RewardPlanner planner = new RewardPlanner();
 
 	private final HashSet<Monster> npcTargets = new HashSet<>();
 
 	private final Map<Monster,Integer> optimalNpcTargets = new HashMap<>();
-
-	private final HighlightedNpc.HighlightedNpcBuilder npcBuilder = HighlightedNpc.builder()
-		.hull( true );
 
 	private HighlightedNpc getHighlightForNpc( NPC npc )
 	{
@@ -89,7 +83,8 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( optimalNpcTargets.containsKey( monster ) )
 		{
-			return npcBuilder
+			return HighlightedNpc.builder()
+				.hull( true )
 				.highlightColor( config.optimalColor() )
 				.npc( npc )
 				.build();
@@ -97,7 +92,8 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( npcTargets.contains( monster ) )
 		{
-			return npcBuilder
+			return HighlightedNpc.builder()
+				.hull( true )
 				.highlightColor( config.highlightColor() )
 				.npc( npc )
 				.build();
@@ -131,9 +127,13 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		clientThreadMarshal.dispose();
+
 		npcOverlayService.unregisterHighlighter( this::getHighlightForNpc );
 
 		hideOverlay();
+
+		invokeUpdate();
 	}
 
 	@Subscribe
@@ -161,7 +161,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( wantsUpdate )
 		{
-			queueUpdate();
+			invokeUpdate();
 		}
 	}
 
@@ -174,7 +174,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			log.debug( "logged in" );
 
 			updateCheck();
-			queueUpdate();
+			invokeUpdate();
 		}
 	}
 
@@ -185,7 +185,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		{
 			log.debug( "config changed" );
 
-			queueUpdate();
+			invokeUpdate();
 		}
 	}
 
@@ -228,19 +228,14 @@ public class BarrowsPotentialPlugin extends Plugin
 	}
 
 	// queue an update to the plan if one hasn't been queued already
-	private void queueUpdate()
+	private void invokeUpdate()
 	{
-		if ( !updateQueued )
-			clientThread.invokeLater( this::updatePlan );
-
-		updateQueued = true;
+		clientThreadMarshal.invoke( this::updatePlan );
 	}
 
 	private void updatePlan()
 	{
 		assert ( client.isClientThread() );
-
-		updateQueued = false;
 
 		hideOverlay();
 
