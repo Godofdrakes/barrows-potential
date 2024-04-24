@@ -2,6 +2,7 @@ package com.barrowspotential;
 
 import com.google.inject.Provides;
 import lombok.extern.slf4j.Slf4j;
+import lombok.val;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
@@ -17,9 +18,8 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Set;
+import javax.inject.Named;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -46,13 +46,13 @@ public class BarrowsPotentialPlugin extends Plugin
 	private ConfigManager configManager;
 
 	@Inject
-	private BarrowsPotentialConfig config;
-
-	@Inject
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
 	private ClientThread clientThread;
+
+	@Inject
+	private BarrowsPotentialConfig config;
 
 	@Inject
 	private BarrowsPotentialHighlight npcOverlay;
@@ -61,8 +61,6 @@ public class BarrowsPotentialPlugin extends Plugin
 	private BarrowsPotentialOverlay screenOverlay;
 
 	private final AtomicBoolean updatePending = new AtomicBoolean( false );
-
-	private final RewardPlanner planner = new RewardPlanner();
 
 	private void queueUpdatePlan()
 	{
@@ -164,36 +162,19 @@ public class BarrowsPotentialPlugin extends Plugin
 		return client.getVarbitValue( target.getVarbit() ) == 1;
 	}
 
-	// get the user's base plan, which we will add crypt monsters to
-	private RewardPlan getBasePlan()
+	private RewardPlan getDefeatedBrothers()
 	{
-		final Set<Monster> configPlan = config.rewardPlan();
+		val brothers = new ArrayList<Monster>();
 
-		final Map<Monster,Integer> monsters = new HashMap<>();
-
-		// add all brothers that we haven't yet defeated to the plan
-		for ( final Monster brother : Monster.brothers )
+		for ( val brother : Monster.brothers )
 		{
-			if ( !configPlan.contains( brother ) )
-				continue;
-
 			if ( isBrotherDefeated( brother ) )
-				continue;
-
-			monsters.put( brother, 1 );
+			{
+				brothers.add( brother );
+			}
 		}
 
-		return new RewardPlan( monsters );
-	}
-
-	// get the set of monsters the user wants to plan around
-	private Set<Monster> getMonstersToTarget()
-	{
-		final Set<Monster> monsters = config.rewardPlan();
-
-		monsters.retainAll( Monster.cryptMonsters );
-
-		return monsters;
+		return RewardPlan.Create( brothers );
 	}
 
 	private void updatePlan()
@@ -203,82 +184,50 @@ public class BarrowsPotentialPlugin extends Plugin
 		npcOverlay.clear();
 		screenOverlay.clear();
 
-		planner.monstersToTarget = getMonstersToTarget();
+		val rewardPotential = getRewardPotential();
 
-		final RewardTarget rewardTarget = config.rewardTarget();
+		val targetReward = config.rewardTarget();
+		val targetMonsters = config.rewardPlan();
 
-		log.debug( "reward target {}", rewardTarget.getDisplayName() );
+		val targetPotentialClamped = Math.min( REWARD_POTENTIAL_MAX, targetReward.getMaxValue() );
+		val targetPotentialMet = rewardPotential >= targetPotentialClamped;
 
-		final int rewardPotential = getRewardPotential();
-		final int requiredPotential = rewardTarget.getMinValue();
-		final int targetPotential = rewardTarget.getMaxValue();
-		final int targetPotentialClamped = Math.min( REWARD_POTENTIAL_MAX, targetPotential );
+		log.warn( "reward potential {}", rewardPotential );
+		log.warn( "target potential {}", targetPotentialClamped );
 
-		log.debug( "reward potential {}", rewardPotential );
-
-		// Starting from the base plan ensures we don't go fill up on score
-		// Before the player has killed all their target brothers
-		final RewardPlan basePlan = getBasePlan();
-
-		final int basePotential = basePlan.GetRewardPotential();
-
-		final boolean rewardPotentialMet = rewardPotential + basePotential >= targetPotentialClamped;
-		if ( !rewardPotentialMet )
+		if ( !targetPotentialMet )
 		{
-			// Highlight all monsters that don't exceed the goal
-
-			for ( final Monster monster : planner.monstersToTarget )
+			for ( val monster : targetMonsters )
 			{
-				if ( rewardPotential + basePotential + monster.getCombatLevel() > targetPotential )
+				if ( monster.isBrother() )
+				{
 					continue;
+				}
+
+				val expectedRewardPotential = rewardPotential + monster.getCombatLevel();
+
+				if ( expectedRewardPotential > targetReward.getMaxValue() )
+				{
+					// Don't highlight monsters that would put us over the target
+					continue;
+				}
 
 				npcOverlay.add( monster );
 			}
 
-			log.debug( "planner mode {}", planner.mode );
+			val planner = new RewardPlanner();
 
-			if ( targetPotential < Integer.MAX_VALUE )
-			{
-				// try to maximize rewards without going over
-				planner.mode = RewardPlanner.Mode.NEAREST;
+			val basePlan = getDefeatedBrothers();
 
-				// instead of tracking past kills just make a plan on the fly
-				// if the player follows the plan it will progress naturally
-				// if the player breaks from the plan it will adapt and make a new one
-				planner.reset( basePlan, targetPotential - rewardPotential );
-			}
-			else
-			{
-				// keys and helm don't scale with reward score
-				// take any plan that gets us what we want
-				planner.mode = RewardPlanner.Mode.ANY;
-				planner.reset( basePlan, requiredPotential - rewardPotential );
-			}
+			log.warn( "base reward potential {}", basePlan.GetRewardPotential() );
 
-			RewardPlan plan = null;
+			// Find a plan that gets us from our current reward potential to the target
+			// This plan must only include the monsters/brothers we have selected
 
-			int iteration = 0;
+			planner.reset( getDefeatedBrothers(), targetReward.getMaxValue() - rewardPotential );
+			planner.setTargetMonsters( config.rewardPlan() );
 
-			// There's generally not a reason to let the planner run for a bunch of iterations
-			// We generally know within ~20 iterations if a perfect plan (exactly the target score) is possible
-			for ( ; iteration < PLANNER_ITERATIONS_MAX; ++iteration )
-			{
-				plan = planner.search();
-
-				if ( plan != null )
-					break;
-			}
-
-			log.debug( "planner ran for {} iterations", iteration );
-
-			if ( plan == null )
-			{
-				// We failed to get a plan that _exactly_ matches the target within the iteration limit
-				// Just take the best plan the planner could come up with
-				log.debug( "taking partial plan" );
-
-				plan = planner.takeBest();
-			}
+			val plan = planner.search( PLANNER_ITERATIONS_MAX );
 
 			if ( plan == null )
 			{
@@ -288,33 +237,33 @@ public class BarrowsPotentialPlugin extends Plugin
 			}
 			else
 			{
-				int planValue = plan.GetRewardPotential() + rewardPotential;
+				val planValue = plan.GetRewardPotential();
 
-				if ( planValue < requiredPotential )
+				log.warn( "planned reward potential: {}", planValue );
+
+				if ( planValue < targetReward.getMinValue() )
 				{
 					// In theory this will never happen
 					log.warn( "plan does not meet target" );
 				}
 
-				log.debug( "planned reward potential: {}", planValue );
-
-				npcOverlay.addAllOptimal( plan.monsters.keySet() );
-
-				screenOverlay
-					.setRewardDisplay( rewardPotential, config.rewardTarget() )
-					.setOptimalMonsters( plan.monsters );
-
-				for ( final Map.Entry<Monster,Integer> entry : plan.monsters.entrySet() )
+				for ( val entry : plan.monsters.entrySet() )
 				{
-					int count = entry.getValue();
-					String name = entry.getKey().getDisplayName();
-					int value = entry.getKey().getCombatLevel() * count;
+					val count = entry.getValue();
+					val name = entry.getKey().getDisplayName();
+					val value = entry.getKey().getCombatLevel() * count;
 					log.debug( "x{} {} ({})", count, name, value );
+
+					npcOverlay.addOptimal( entry.getKey() );
 				}
+
+				screenOverlay.setOptimalMonsters( plan.monsters );
 			}
 		}
 
 		npcOverlay.rebuild();
+
+		screenOverlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
 
 		updatePending.set( false );
 	}

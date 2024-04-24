@@ -1,76 +1,90 @@
 package com.barrowspotential;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import com.google.common.collect.ImmutableMap;
+import lombok.val;
+
+import javax.annotation.Nonnull;
+import java.util.*;
 
 public class RewardPlan
 {
-    public static RewardPlan Create( Monster... monsters )
-    {
-        Map<Monster,Integer> map = new HashMap<>();
+	public static RewardPlan Create( Monster... monsters )
+	{
+		val map = new HashMap<Monster,Integer>();
 
-        for ( Monster monster : monsters )
-        {
-            map.put( monster, map.getOrDefault( monster, 0 ) + 1 );
-        }
+		for ( val monster : monsters )
+		{
+			map.compute( monster, ( key, value ) -> value == null ? 1 : value + 1 );
+		}
 
-        return new RewardPlan( map );
-    }
+		return new RewardPlan( map );
+	}
 
-    public static final RewardPlan Default = new RewardPlan( new HashMap<>() );
+	public static RewardPlan Create( @Nonnull Collection<Monster> monsters )
+	{
+		val map = new HashMap<Monster,Integer>();
 
-    public final Map<Monster,Integer> monsters;
+		for ( val monster : monsters )
+		{
+			map.compute( monster, ( key, value ) -> value == null ? 1 : value + 1 );
+		}
 
-    public RewardPlan( Map<Monster,Integer> monsters )
-    {
-        this.monsters = Collections.unmodifiableMap( monsters );
-    }
+		return new RewardPlan( map );
+	}
 
-    public RewardPlan Append( Monster monster )
-    {
-        Map<Monster,Integer> monsters = new HashMap<>( this.monsters );
-        monsters.put( monster, this.monsters.getOrDefault( monster, 0 ) + 1 );
-        return new RewardPlan( monsters );
-    }
+	public static final RewardPlan Default = new RewardPlan( new HashMap<>() );
 
-    public int GetRewardPotential()
-    {
-        int rewardPotential = 0;
+	public final Map<Monster,Integer> monsters;
 
-        for ( Map.Entry<Monster,Integer> entry : this.monsters.entrySet() )
-        {
-            rewardPotential += entry.getKey().getCombatLevel() * entry.getValue();
+	public RewardPlan( @Nonnull Map<Monster,Integer> monsters )
+	{
+		this.monsters = ImmutableMap.copyOf( monsters );
+	}
 
-            // each brother adds 2 to the final reward potential
-            if (entry.getKey().isBrother())
-            {
-                rewardPotential += 2;
-            }
-        }
+	public RewardPlan Append( Monster monster )
+	{
+		val monsters = new HashMap<>( this.monsters );
+		monsters.compute( monster, ( key, value ) -> value == null ? 1 : value + 1 );
+		return new RewardPlan( monsters );
+	}
 
-        return rewardPotential;
-    }
+	public int GetRewardPotential()
+	{
+		int rewardPotential = 0;
 
-    @Override
-    public int hashCode()
-    {
-        return monsters.hashCode();
-    }
+		for ( Map.Entry<Monster,Integer> entry : this.monsters.entrySet() )
+		{
+			rewardPotential += entry.getKey().getCombatLevel() * entry.getValue();
 
-    @Override
-    public boolean equals( Object obj )
-    {
-        if ( obj == null || obj.getClass() != RewardPlan.class )
-            return false;
+			// each brother adds 2 to the final reward potential
+			if ( entry.getKey().isBrother() )
+			{
+				rewardPotential += 2;
+			}
+		}
 
-        RewardPlan other = (RewardPlan) obj;
-        return monsters.equals( other.monsters );
-    }
+		return rewardPotential;
+	}
 
-    @Override
-    public String toString()
-    {
-        return String.format( "Potential: %d", GetRewardPotential() );
-    }
+	@Override
+	public int hashCode()
+	{
+		return monsters.hashCode();
+	}
+
+	@Override
+	public boolean equals( Object obj )
+	{
+		if ( obj == null || obj.getClass() != RewardPlan.class )
+			return false;
+
+		RewardPlan other = (RewardPlan) obj;
+		return monsters.equals( other.monsters );
+	}
+
+	@Override
+	public String toString()
+	{
+		return String.format( "Potential: %d", GetRewardPotential() );
+	}
 }

@@ -92,18 +92,17 @@ public class RewardPlannerTest extends TestCase
 	}
 
 	// assert that for the given base plan there is an optimal plan to reach the target
-	private static RewardPlan assertOptimalPlan( RewardPlanner planner, Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
+	private static RewardPlan assertOptimalPlan( RewardPlanner planner,
+		Logger logger,
+		RewardTarget rewardTarget,
+		RewardPlan basePlan )
 	{
 		assert planner != null;
 
 		logger.info( "searching for optimal plan" );
 
-		planner.mode = rewardTarget.getMaxValue() < Integer.MAX_VALUE
-			? RewardPlanner.Mode.NEAREST
-			: RewardPlanner.Mode.ANY;
-		planner.reset( basePlan, rewardTarget.getMaxValue() < Integer.MAX_VALUE
-			? rewardTarget.getMaxValue()
-			: rewardTarget.getMinValue() );
+		planner.reset( basePlan, rewardTarget.getMaxValue() );
+		planner.setTargetMonsters( EnumSet.allOf( Monster.class ) );
 
 		// allow a lot of iterations here since this isn't runtime code
 		RewardPlan plan = RunPlanner( logger, planner, 1000 );
@@ -120,19 +119,16 @@ public class RewardPlannerTest extends TestCase
 	}
 
 	// assert that for the given base plan there is a valid plan to reach the target within 20 iterations
-	private static RewardPlan assertValidPlan( RewardPlanner planner, Logger logger, RewardTarget rewardTarget, RewardPlan basePlan )
+	private static RewardPlan assertValidPlan( RewardPlanner planner,
+		Logger logger,
+		RewardTarget rewardTarget,
+		RewardPlan basePlan )
 	{
 		assert planner != null;
 
 		logger.info( "searching for valid plan" );
 
-		planner.mode = rewardTarget.getMaxValue() < Integer.MAX_VALUE
-			? RewardPlanner.Mode.NEAREST
-			: RewardPlanner.Mode.ANY;
-
-		planner.reset( basePlan, rewardTarget.getMaxValue() < Integer.MAX_VALUE
-			? rewardTarget.getMaxValue()
-			: rewardTarget.getMinValue() );
+		planner.reset( basePlan, rewardTarget.getMaxValue() );
 
 		// at runtime the number of iterations is limited, test that here
 		RewardPlan plan = RunPlanner( logger, planner, 20 );
@@ -231,10 +227,10 @@ public class RewardPlannerTest extends TestCase
 	{
 		RewardPlanner planner = new RewardPlanner();
 
-		planner.monstersToTarget = EnumSet.of(
+		planner.setTargetMonsters( EnumSet.of(
 			Monster.Skeleton,
 			Monster.Bloodworm
-		);
+		) );
 
 		RewardPlan basePlan = RewardPlan.Create(
 			Monster.Ahrim,

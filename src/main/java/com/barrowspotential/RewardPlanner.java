@@ -1,12 +1,24 @@
 package com.barrowspotential;
 
-import java.util.*;
+import com.google.common.collect.ImmutableSet;
+import lombok.extern.slf4j.Slf4j;
+import lombok.val;
+
+import javax.annotation.Nonnull;
+import javax.inject.Inject;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Comparator;
+import java.util.Set;
 
 // an implementation of A* used to plan which crypt monsters to kill to reach the desired reward potential.
 // this only considers crypt monsters as possible nodes.
 // any brothers the player wants to kill should be fed to Reset() as the starting plan.
-public class RewardPlanner extends AStar<RewardPlan,Integer>
+@Slf4j
+public final class RewardPlanner extends AStar<RewardPlan,Integer>
 {
+	private static final int REWARD_POTENTIAL_MAX = 1012;
+
 	public enum Mode
 	{
 		// look for plans that do not exceed the goal value
@@ -16,55 +28,108 @@ public class RewardPlanner extends AStar<RewardPlan,Integer>
 		ANY,
 	}
 
-	public Mode mode = Mode.NEAREST;
+	@Nonnull
+	private Set<Monster> targetMonsters = ImmutableSet.of();
 
-	public Set<Monster> monstersToTarget = Monster.cryptMonsters;
-
+	@Inject
 	public RewardPlanner()
 	{
 		// inverse sort simplifies the math a bit
 		super( Integer.MIN_VALUE, Comparator.reverseOrder() );
 	}
 
+	public void setTargetMonsters( @Nonnull Set<Monster> monsters )
+	{
+		targetMonsters = ImmutableSet.copyOf( monsters );
+	}
+
 	@Override
-	protected int getHScore( RewardPlan current, Integer target )
+	protected int getHScore( @Nonnull RewardPlan current, @Nonnull Integer target )
 	{
 		// hScore becomes the total reward potential of the current plan
 		return current.GetRewardPotential();
 	}
 
 	@Override
-	protected int getDScore( RewardPlan current, RewardPlan neighbor )
+	protected int getDScore( @Nonnull RewardPlan current, @Nonnull RewardPlan neighbor )
 	{
 		// dScore becomes the increase in reward potential compared to the current plan
 		return neighbor.GetRewardPotential() - current.GetRewardPotential();
 	}
 
 	@Override
-	protected boolean isGoal( RewardPlan current, Integer target )
+	protected boolean isGoal( @Nonnull RewardPlan current, @Nonnull Integer target )
 	{
-		return current.GetRewardPotential() >= target;
+		// Clamp to REWARD_POTENTIAL_MAX, so we stop once we hit it
+		return current.GetRewardPotential() >= Math.min( target, REWARD_POTENTIAL_MAX );
 	}
 
 	@Override
-	protected Collection<RewardPlan> getNeighbors( RewardPlan current, Integer target )
+	protected Collection<RewardPlan> getNeighbors( @Nonnull RewardPlan current, @Nonnull Integer target )
 	{
-		assert ( monstersToTarget != null );
-
 		// generate a list of all possible crypt monsters we could kill
-		ArrayList<RewardPlan> neighbors = new ArrayList<>();
+		val neighbors = new ArrayList<RewardPlan>();
 
-		int currentValue = current.GetRewardPotential();
+		val currentValue = current.GetRewardPotential();
 
-		for ( Monster monster : monstersToTarget )
+		for ( val brother : Monster.brothers )
 		{
-			// skip crypt monsters that would put us over the target score
-			if ( mode == Mode.NEAREST && currentValue + monster.getCombatLevel() > target )
+			if ( current.monsters.containsKey( brother ) )
+			{
+				// skip brothers that have already been killed
 				continue;
+			}
 
-			neighbors.add( current.Append( monster ) );
+			if ( targetMonsters.contains( brother ) )
+			{
+				neighbors.add( current.Append( brother ) );
+			}
+		}
+
+		for ( val monster : Monster.cryptMonsters )
+		{
+			if ( currentValue + monster.getCombatLevel() > target )
+			{
+				// skip crypt monsters that would put us over the target score
+				continue;
+			}
+
+			if ( targetMonsters.contains( monster ) )
+			{
+				neighbors.add( current.Append( monster ) );
+			}
 		}
 
 		return neighbors;
+	}
+
+	public RewardPlan search( final int iterationsMax )
+	{
+		RewardPlan plan = null;
+
+		int iterations = 0;
+
+		// There's generally not a reason to let the planner run for a bunch of iterations
+		// We generally know within ~20 iterations if a perfect plan (exactly the target score) is possible
+		for ( ; iterations < iterationsMax; ++iterations )
+		{
+			plan = search();
+
+			if ( plan != null )
+				break;
+		}
+
+		log.warn( "planner ran for {} iterations", iterations );
+
+		if ( plan == null )
+		{
+			// We failed to get a plan that _exactly_ matches the target within the iteration limit
+			// Just take the best plan the planner could come up with
+			log.warn( "taking partial plan" );
+
+			plan = takeBest();
+		}
+
+		return plan;
 	}
 }
