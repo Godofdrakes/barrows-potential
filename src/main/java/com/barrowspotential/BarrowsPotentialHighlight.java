@@ -10,15 +10,17 @@ import javax.inject.Inject;
 import java.awt.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 public final class BarrowsPotentialHighlight
 {
 	private final Set<Integer> npcHighlights = ConcurrentHashMap.newKeySet();
 	private final Set<Integer> npcHighlightsOptimal = ConcurrentHashMap.newKeySet();
 
-	private final AtomicReference<Color> highlightColor = new AtomicReference<>( null );
-	private final AtomicReference<Color> highlightColorOptimal = new AtomicReference<>( null );
+	// https://stackoverflow.com/questions/3964211/when-to-use-atomicreference-in-java
+	// Supposedly reference assignment is already atomic so use of AtomicReference shouldn't be necessary
+
+	private volatile Color highlightColor = null;
+	private volatile Color highlightColorOptimal = null;
 
 	private final NpcOverlayService overlayService;
 
@@ -46,12 +48,12 @@ public final class BarrowsPotentialHighlight
 	{
 		if ( npcHighlightsOptimal.contains( npc.getId() ) )
 		{
-			return highlightColorOptimal.get();
+			return highlightColorOptimal;
 		}
 
 		if ( npcHighlights.contains( npc.getId() ) )
 		{
-			return highlightColor.get();
+			return highlightColor;
 		}
 
 		return null;
@@ -75,14 +77,14 @@ public final class BarrowsPotentialHighlight
 
 	public BarrowsPotentialHighlight setHighlightColor( final Color color )
 	{
-		highlightColor.set( color );
+		highlightColor = color;
 
 		return this;
 	}
 
 	public BarrowsPotentialHighlight setHighlightOptimalColor( final Color color )
 	{
-		highlightColorOptimal.set( color );
+		highlightColorOptimal = color;
 
 		return this;
 	}

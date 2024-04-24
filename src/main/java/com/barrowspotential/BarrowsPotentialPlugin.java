@@ -18,10 +18,9 @@ import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @PluginDescriptor(
@@ -37,7 +36,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
-	private static final int PLUGIN_VERSION = 2;
+	private static final int PLUGIN_VERSION = 4;
 	private static final int PLUGIN_VERSION_RELEASE = 1;
 
 	@Inject
@@ -61,7 +60,17 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Inject
 	private BarrowsPotentialOverlay screenOverlay;
 
+	private final AtomicBoolean updatePending = new AtomicBoolean( false );
+
 	private final RewardPlanner planner = new RewardPlanner();
+
+	private void queueUpdatePlan()
+	{
+		if ( !updatePending.getAndSet( true ) )
+		{
+			clientThread.invokeLater( this::updatePlan );
+		}
+	}
 
 	@Override
 	protected void startUp()
@@ -74,7 +83,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			.setIsInCrypt( isInCrypt() )
 			.setVisibility( config.overlayOptimal() );
 
-		clientThread.invokeLater( this::updatePlan );
+		queueUpdatePlan();
 	}
 
 	@Override
@@ -87,9 +96,6 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Subscribe
 	public void onVarbitChanged( VarbitChanged event )
 	{
-		// @todo: how to prevent this from running twice when you kill a brother?
-		// BARROWS_REWARD_POTENTIAL runs and then the brother's varbit runs
-
 		boolean wantsUpdate = event.getVarbitId() == Varbits.BARROWS_REWARD_POTENTIAL;
 
 		if ( event.getVarbitId() == Varbits.BARROWS_REWARD_POTENTIAL )
@@ -109,7 +115,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( wantsUpdate )
 		{
-			clientThread.invokeLater( this::updatePlan );
+			queueUpdatePlan();
 		}
 	}
 
@@ -125,7 +131,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 			screenOverlay.setIsInCrypt( isInCrypt() );
 
-			clientThread.invokeLater( this::updatePlan );
+			queueUpdatePlan();
 		}
 		else
 		{
@@ -163,7 +169,7 @@ public class BarrowsPotentialPlugin extends Plugin
 	{
 		final Set<Monster> configPlan = config.rewardPlan();
 
-		final Map<Monster, Integer> monsters = new HashMap<>();
+		final Map<Monster,Integer> monsters = new HashMap<>();
 
 		// add all brothers that we haven't yet defeated to the plan
 		for ( final Monster brother : Monster.brothers )
@@ -192,7 +198,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	private void updatePlan()
 	{
-		assert (client.isClientThread());
+		assert ( client.isClientThread() );
 
 		npcOverlay.clear();
 		screenOverlay.clear();
@@ -294,13 +300,11 @@ public class BarrowsPotentialPlugin extends Plugin
 
 				npcOverlay.addAllOptimal( plan.monsters.keySet() );
 
-				if ( !plan.equals( basePlan ) )
-				{
-					screenOverlay.setOptimalMonsters( plan.monsters );
-					screenOverlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
-				}
+				screenOverlay
+					.setRewardDisplay( rewardPotential, config.rewardTarget() )
+					.setOptimalMonsters( plan.monsters );
 
-				for ( Map.Entry<Monster, Integer> entry : plan.monsters.entrySet() )
+				for ( final Map.Entry<Monster,Integer> entry : plan.monsters.entrySet() )
 				{
 					int count = entry.getValue();
 					String name = entry.getKey().getDisplayName();
@@ -311,11 +315,14 @@ public class BarrowsPotentialPlugin extends Plugin
 		}
 
 		npcOverlay.rebuild();
+
+		updatePending.set( false );
 	}
 
 	public int getRegionID()
 	{
-		Player localPlayer = client.getLocalPlayer();
+		final Player localPlayer = client.getLocalPlayer();
+
 		if ( localPlayer == null )
 		{
 			return 0;
