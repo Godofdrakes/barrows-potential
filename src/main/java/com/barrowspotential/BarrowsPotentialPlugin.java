@@ -5,6 +5,7 @@ import lombok.extern.slf4j.Slf4j;
 import net.runelite.api.*;
 import net.runelite.api.events.GameStateChanged;
 import net.runelite.api.events.VarbitChanged;
+import net.runelite.client.callback.ClientThread;
 import net.runelite.client.chat.ChatColorType;
 import net.runelite.client.chat.ChatMessageBuilder;
 import net.runelite.client.chat.ChatMessageManager;
@@ -12,23 +13,21 @@ import net.runelite.client.chat.QueuedMessage;
 import net.runelite.client.config.ConfigManager;
 import net.runelite.client.eventbus.Subscribe;
 import net.runelite.client.events.ConfigChanged;
-import net.runelite.client.game.npcoverlay.HighlightedNpc;
-import net.runelite.client.game.npcoverlay.NpcOverlayService;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
-import net.runelite.client.ui.overlay.OverlayManager;
 
 import javax.inject.Inject;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Slf4j
 @PluginDescriptor(
 	name = "Barrows Potential",
 	description = "Highlights optimal NPCs in the Barrows Crypts",
-	tags = { "barrows", "overlay", "pve", "pvm" }
+	tags = {"barrows", "overlay", "pve", "pvm"}
 )
 public class BarrowsPotentialPlugin extends Plugin
 {
@@ -51,89 +50,38 @@ public class BarrowsPotentialPlugin extends Plugin
 	private BarrowsPotentialConfig config;
 
 	@Inject
-	private BarrowsPotentialOverlay overlay;
-
-	@Inject
-	private OverlayManager overlayManager;
-
-	@Inject
-	private NpcOverlayService npcOverlayService;
-
-	@Inject
 	private ChatMessageManager chatMessageManager;
 
 	@Inject
-	private ClientThreadMarshal clientThreadMarshal;
+	private ClientThread clientThread;
+
+	@Inject
+	private BarrowsPotentialHighlight npcOverlay;
+
+	@Inject
+	private BarrowsPotentialOverlay screenOverlay;
 
 	private final RewardPlanner planner = new RewardPlanner();
-
-	private final HashSet<Monster> npcTargets = new HashSet<>();
-
-	private final Map<Monster,Integer> optimalNpcTargets = new HashMap<>();
-
-	private HighlightedNpc getHighlightForNpc( NPC npc )
-	{
-		Monster monster = Monster.cryptMonsterByNpcID.get( npc.getId() );
-		if ( monster == null )
-		{
-			// This isn't a monster we would ever care about
-			assert ( !Monster.cryptMonsterByNpcID.containsKey( npc.getId() ) );
-			return null;
-		}
-
-		if ( optimalNpcTargets.containsKey( monster ) )
-		{
-			return HighlightedNpc.builder()
-				.hull( true )
-				.highlightColor( config.optimalColor() )
-				.npc( npc )
-				.build();
-		}
-
-		if ( npcTargets.contains( monster ) )
-		{
-			return HighlightedNpc.builder()
-				.hull( true )
-				.highlightColor( config.highlightColor() )
-				.npc( npc )
-				.build();
-		}
-
-		return null;
-	}
-	
-	private void showOverlay()
-	{
-		if ( overlayManager.add( overlay ) )
-		{
-			log.debug( "overlay visible" );
-		}
-	}
-	
-	private void hideOverlay()
-	{
-		if ( overlayManager.remove( overlay ) )
-		{
-			log.debug( "overlay hidden" );
-		}
-	}
 
 	@Override
 	protected void startUp()
 	{
-		npcOverlayService.registerHighlighter( this::getHighlightForNpc );
+		npcOverlay.connect()
+			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+			.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
+
+		screenOverlay.connect()
+			.setIsInCrypt( isInCrypt() )
+			.setVisibility( config.overlayOptimal() );
+
+		clientThread.invokeLater( this::updatePlan );
 	}
 
 	@Override
 	protected void shutDown()
 	{
-		clientThreadMarshal.dispose();
-
-		npcOverlayService.unregisterHighlighter( this::getHighlightForNpc );
-
-		hideOverlay();
-
-		invokeUpdate();
+		npcOverlay.dispose();
+		screenOverlay.dispose();
 	}
 
 	@Subscribe
@@ -161,7 +109,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( wantsUpdate )
 		{
-			invokeUpdate();
+			clientThread.invokeLater( this::updatePlan );
 		}
 	}
 
@@ -174,7 +122,14 @@ public class BarrowsPotentialPlugin extends Plugin
 			log.debug( "logged in" );
 
 			updateCheck();
-			invokeUpdate();
+
+			screenOverlay.setIsInCrypt( isInCrypt() );
+
+			clientThread.invokeLater( this::updatePlan );
+		}
+		else
+		{
+			screenOverlay.setIsInCrypt( false );
 		}
 	}
 
@@ -185,7 +140,15 @@ public class BarrowsPotentialPlugin extends Plugin
 		{
 			log.debug( "config changed" );
 
-			invokeUpdate();
+			npcOverlay
+				.rebuild()
+				.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
+
+			screenOverlay
+				.setVisibility( config.overlayOptimal() );
+
+			clientThread.invokeLater( this::updatePlan );
 		}
 	}
 
@@ -200,10 +163,10 @@ public class BarrowsPotentialPlugin extends Plugin
 	{
 		final Set<Monster> configPlan = config.rewardPlan();
 
-		Map<Monster,Integer> monsters = new HashMap<>();
+		final Map<Monster, Integer> monsters = new HashMap<>();
 
 		// add all brothers that we haven't yet defeated to the plan
-		for ( Monster brother : Monster.brothers )
+		for ( final Monster brother : Monster.brothers )
 		{
 			if ( !configPlan.contains( brother ) )
 				continue;
@@ -220,75 +183,52 @@ public class BarrowsPotentialPlugin extends Plugin
 	// get the set of monsters the user wants to plan around
 	private Set<Monster> getMonstersToTarget()
 	{
-		Set<Monster> monsters = new HashSet<>( config.rewardPlan() );
+		final Set<Monster> monsters = config.rewardPlan();
 
 		monsters.retainAll( Monster.cryptMonsters );
 
 		return monsters;
 	}
 
-	// queue an update to the plan if one hasn't been queued already
-	private void invokeUpdate()
-	{
-		clientThreadMarshal.invoke( this::updatePlan );
-	}
-
 	private void updatePlan()
 	{
-		assert ( client.isClientThread() );
+		assert (client.isClientThread());
 
-		hideOverlay();
-
-		if ( !isInCrypt() )
-		{
-			// Guard against running this outside of the crypt.
-			// If executes further it could show the overlay in places it shouldn't.
-			return;
-		}
-
-		npcTargets.clear();
-		optimalNpcTargets.clear();
+		npcOverlay.clear();
+		screenOverlay.clear();
 
 		planner.monstersToTarget = getMonstersToTarget();
 
-		RewardTarget rewardTarget = config.rewardTarget();
+		final RewardTarget rewardTarget = config.rewardTarget();
 
 		log.debug( "reward target {}", rewardTarget.getDisplayName() );
 
-		int rewardPotential = getRewardPotential();
-		int requiredPotential = rewardTarget.getMinValue();
-		int targetPotential = rewardTarget.getMaxValue();
-		int targetPotentialClamped = Math.min( REWARD_POTENTIAL_MAX, targetPotential );
+		final int rewardPotential = getRewardPotential();
+		final int requiredPotential = rewardTarget.getMinValue();
+		final int targetPotential = rewardTarget.getMaxValue();
+		final int targetPotentialClamped = Math.min( REWARD_POTENTIAL_MAX, targetPotential );
 
 		log.debug( "reward potential {}", rewardPotential );
 
 		// Starting from the base plan ensures we don't go fill up on score
 		// Before the player has killed all their target brothers
-		RewardPlan basePlan = getBasePlan();
-		int basePotential = basePlan.GetRewardPotential();
+		final RewardPlan basePlan = getBasePlan();
 
-		boolean rewardPotentialMet = rewardPotential + basePotential >= targetPotentialClamped;
-		if ( rewardPotentialMet )
-		{
-			npcOverlayService.rebuild();
-			return;
-		}
+		final int basePotential = basePlan.GetRewardPotential();
 
-		// Highlight all monsters that don't exceed the goal
-		if ( config.highlightNpc() )
+		final boolean rewardPotentialMet = rewardPotential + basePotential >= targetPotentialClamped;
+		if ( !rewardPotentialMet )
 		{
-			for ( Monster monster : planner.monstersToTarget )
+			// Highlight all monsters that don't exceed the goal
+
+			for ( final Monster monster : planner.monstersToTarget )
 			{
 				if ( rewardPotential + basePotential + monster.getCombatLevel() > targetPotential )
 					continue;
 
-				npcTargets.add( monster );
+				npcOverlay.add( monster );
 			}
-		}
 
-		// Highlight the optimal monsters to reach the goal
-		if ( config.highlightOptimal() || config.overlayOptimal() )
-		{
 			log.debug( "planner mode {}", planner.mode );
 
 			if ( targetPotential < Integer.MAX_VALUE )
@@ -314,11 +254,11 @@ public class BarrowsPotentialPlugin extends Plugin
 			int iteration = 0;
 
 			// There's generally not a reason to let the planner run for a bunch of iterations
-			// Even with a single brother targeted the optimal plan is ~11 steps
 			// We generally know within ~20 iterations if a perfect plan (exactly the target score) is possible
 			for ( ; iteration < PLANNER_ITERATIONS_MAX; ++iteration )
 			{
 				plan = planner.search();
+
 				if ( plan != null )
 					break;
 			}
@@ -330,6 +270,7 @@ public class BarrowsPotentialPlugin extends Plugin
 				// We failed to get a plan that _exactly_ matches the target within the iteration limit
 				// Just take the best plan the planner could come up with
 				log.debug( "taking partial plan" );
+
 				plan = planner.takeBest();
 			}
 
@@ -351,19 +292,15 @@ public class BarrowsPotentialPlugin extends Plugin
 
 				log.debug( "planned reward potential: {}", planValue );
 
-				if ( config.highlightOptimal() )
+				npcOverlay.addAllOptimal( plan.monsters.keySet() );
+
+				if ( !plan.equals( basePlan ) )
 				{
-					optimalNpcTargets.putAll( plan.monsters );
+					screenOverlay.setOptimalMonsters( plan.monsters );
+					screenOverlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
 				}
 
-				if ( config.overlayOptimal() && !plan.equals( basePlan ) )
-				{
-					overlay.setOptimalMonsters( plan.monsters );
-					overlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
-					showOverlay();
-				}
-
-				for ( Map.Entry<Monster,Integer> entry : plan.monsters.entrySet() )
+				for ( Map.Entry<Monster, Integer> entry : plan.monsters.entrySet() )
 				{
 					int count = entry.getValue();
 					String name = entry.getKey().getDisplayName();
@@ -373,7 +310,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			}
 		}
 
-		npcOverlayService.rebuild();
+		npcOverlay.rebuild();
 	}
 
 	public int getRegionID()
@@ -417,7 +354,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			BarrowsPotentialConfig.CONFIG_VERSION,
 			int.class );
 
-		if (version == null)
+		if ( version == null )
 		{
 			log.debug( "last plugin version unknown. assuming release." );
 
