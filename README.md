@@ -44,4 +44,4 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 
 ### Version 3
 
-* Fixed case where overlay would be visible outisde of the crypt
+* Fixed case where overlay would be visible outside of the crypt
