@@ -4,12 +4,12 @@ import com.barrowspotential.Monster;
 import com.barrowspotential.RewardPlan;
 import com.barrowspotential.RewardPlanner;
 import com.barrowspotential.RewardTarget;
+import com.google.common.collect.ImmutableMap;
 import junit.framework.TestCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.EnumSet;
-import java.util.HashMap;
 import java.util.Map;
 
 public class RewardPlannerTest extends TestCase
@@ -18,14 +18,7 @@ public class RewardPlannerTest extends TestCase
 
 	private static RewardPlan AllBrothers()
 	{
-		Map<Monster,Integer> map = new HashMap<>();
-		map.put( Monster.Ahrim, 1 );
-		map.put( Monster.Dharok, 1 );
-		map.put( Monster.Guthan, 1 );
-		map.put( Monster.Karil, 1 );
-		map.put( Monster.Torag, 1 );
-		map.put( Monster.Verac, 1 );
-		return new RewardPlan( map );
+		return RewardPlan.create( Monster.brothers );
 	}
 
 	private static RewardPlan AllBrothersOptimalBloodRune()
@@ -33,17 +26,10 @@ public class RewardPlannerTest extends TestCase
 		// The optimal plan is 1 giant crypt spider, 1 skeleton, and 1 crypt spider (880 points)
 		// 3 bloodworms and 1 crypt spider is also 880 points but is more steps, and therefor not optimal
 
-		Map<Monster,Integer> map = new HashMap<>();
-		map.put( Monster.Ahrim, 1 );
-		map.put( Monster.Dharok, 1 );
-		map.put( Monster.Guthan, 1 );
-		map.put( Monster.Karil, 1 );
-		map.put( Monster.Torag, 1 );
-		map.put( Monster.Verac, 1 );
-		map.put( Monster.GiantCryptSpider, 1 );
-		map.put( Monster.Skeleton, 1 );
-		map.put( Monster.CryptSpider, 1 );
-		return new RewardPlan( map );
+		return AllBrothers()
+			.append( Monster.GiantCryptSpider )
+			.append( Monster.Skeleton )
+			.append( Monster.CryptSpider );
 	}
 
 	private static void LogPlan( Logger logger, RewardPlan plan )
@@ -53,11 +39,11 @@ public class RewardPlannerTest extends TestCase
 		int steps = 0;
 		int score = 0;
 
-		for ( Map.Entry<Monster,Integer> entry : plan.monsters.entrySet() )
+		for ( final Map.Entry<Monster,Integer> entry : plan.getMonsters().entrySet() )
 		{
-			int count = entry.getValue();
-			int value = entry.getKey().getCombatLevel() * count;
-			String displayName = entry.getKey().getDisplayName();
+			final int count = entry.getValue();
+			final int value = entry.getKey().getCombatLevel() * count;
+			final String displayName = entry.getKey().getDisplayName();
 			logger.info( "x{} {} ({})", count, displayName, value );
 
 			steps += count;
@@ -113,7 +99,7 @@ public class RewardPlannerTest extends TestCase
 
 		LogPlan( logger, plan );
 
-		assertEquals( rewardTarget.getMaxValue(), plan.GetRewardPotential() );
+		assertEquals( rewardTarget.getMaxValue(), plan.getRewardPotential() );
 
 		return plan;
 	}
@@ -143,16 +129,16 @@ public class RewardPlannerTest extends TestCase
 		LogPlan( logger, plan );
 
 		assertTrue( "planned potential < minimum value",
-			plan.GetRewardPotential() >= rewardTarget.getMinValue() );
+			plan.getRewardPotential() >= rewardTarget.getMinValue() );
 		assertTrue( "planned potential > maximum value value",
-			plan.GetRewardPotential() <= rewardTarget.getMaxValue() );
+			plan.getRewardPotential() <= rewardTarget.getMaxValue() );
 
 		return plan;
 	}
 
 	public void testBaseIsBest()
 	{
-		RewardPlan basePlan = RewardPlan.Default;
+		RewardPlan basePlan = new RewardPlan( ImmutableMap.of() );
 
 		RewardPlanner planner = new RewardPlanner();
 
@@ -180,8 +166,8 @@ public class RewardPlannerTest extends TestCase
 	{
 		RewardPlanner planner = new RewardPlanner();
 
-		RewardPlan combatLevel98 = RewardPlan.Create( Monster.Ahrim );
-		RewardPlan combatLevel115 = RewardPlan.Create( Monster.Dharok );
+		RewardPlan combatLevel98 = RewardPlan.create( Monster.Ahrim );
+		RewardPlan combatLevel115 = RewardPlan.create( Monster.Dharok );
 
 		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel98 );
 		assertOptimalPlan( planner, logger, RewardTarget.BloodRune, combatLevel115 );
@@ -195,7 +181,7 @@ public class RewardPlannerTest extends TestCase
 	{
 		RewardPlanner planner = new RewardPlanner();
 
-		RewardPlan combatLevel98 = RewardPlan.Create(
+		RewardPlan combatLevel98 = RewardPlan.create(
 			//Monster.Ahrim, // combat level 98
 			Monster.Dharok,
 			Monster.Guthan,
@@ -203,7 +189,7 @@ public class RewardPlannerTest extends TestCase
 			Monster.Torag,
 			Monster.Verac
 		);
-		RewardPlan combatLevel115 = RewardPlan.Create(
+		RewardPlan combatLevel115 = RewardPlan.create(
 			Monster.Ahrim,
 			//Monster.Dharok, // combat level 115
 			Monster.Guthan,
@@ -228,18 +214,17 @@ public class RewardPlannerTest extends TestCase
 		RewardPlanner planner = new RewardPlanner();
 
 		planner.setTargetMonsters( EnumSet.of(
-			Monster.Skeleton,
-			Monster.Bloodworm
-		) );
-
-		RewardPlan basePlan = RewardPlan.Create(
 			Monster.Ahrim,
 			Monster.Dharok,
 			Monster.Guthan,
 			Monster.Karil,
 			Monster.Torag,
-			Monster.Verac
-		);
+			Monster.Verac,
+			Monster.Skeleton,
+			Monster.Bloodworm
+		) );
+
+		RewardPlan basePlan = RewardPlan.create( Monster.brothers );
 
 		assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
 	}

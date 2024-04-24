@@ -73,6 +73,17 @@ public enum Monster
 	{
 		return getVarbit() != 0;
 	}
+	
+	public final int getRewardPotential()
+	{
+		if ( isBrother() )
+		{
+			// The game adds 2 potential for each brother killed
+			return getCombatLevel() + 2;
+		}
+
+		return getCombatLevel();
+	}
 
 	private static Map<Integer,Monster> getCryptMonstersByNpcID()
 	{

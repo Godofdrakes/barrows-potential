@@ -18,7 +18,6 @@ import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
 import javax.inject.Inject;
-import javax.inject.Named;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
@@ -162,7 +161,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		return client.getVarbitValue( target.getVarbit() ) == 1;
 	}
 
-	private RewardPlan getDefeatedBrothers()
+	private RewardPlan getBasePlan()
 	{
 		val brothers = new ArrayList<Monster>();
 
@@ -174,7 +173,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			}
 		}
 
-		return RewardPlan.Create( brothers );
+		return RewardPlan.create( brothers, getRewardPotential() );
 	}
 
 	private void updatePlan()
@@ -217,14 +216,10 @@ public class BarrowsPotentialPlugin extends Plugin
 
 			val planner = new RewardPlanner();
 
-			val basePlan = getDefeatedBrothers();
-
-			log.warn( "base reward potential {}", basePlan.GetRewardPotential() );
-
 			// Find a plan that gets us from our current reward potential to the target
 			// This plan must only include the monsters/brothers we have selected
 
-			planner.reset( getDefeatedBrothers(), targetReward.getMaxValue() - rewardPotential );
+			planner.reset( getBasePlan(), targetPotentialClamped );
 			planner.setTargetMonsters( config.rewardPlan() );
 
 			val plan = planner.search( PLANNER_ITERATIONS_MAX );
@@ -237,7 +232,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			}
 			else
 			{
-				val planValue = plan.GetRewardPotential();
+				val planValue = plan.getRewardPotential();
 
 				log.warn( "planned reward potential: {}", planValue );
 
@@ -247,7 +242,7 @@ public class BarrowsPotentialPlugin extends Plugin
 					log.warn( "plan does not meet target" );
 				}
 
-				for ( val entry : plan.monsters.entrySet() )
+				for ( val entry : plan.getMonsters().entrySet() )
 				{
 					val count = entry.getValue();
 					val name = entry.getKey().getDisplayName();
@@ -257,7 +252,7 @@ public class BarrowsPotentialPlugin extends Plugin
 					npcOverlay.addOptimal( entry.getKey() );
 				}
 
-				screenOverlay.setOptimalMonsters( plan.monsters );
+				screenOverlay.setOptimalMonsters( plan.getMonsters() );
 			}
 		}
 

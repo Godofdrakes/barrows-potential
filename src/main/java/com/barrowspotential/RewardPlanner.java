@@ -17,17 +17,6 @@ import java.util.Set;
 @Slf4j
 public final class RewardPlanner extends AStar<RewardPlan,Integer>
 {
-	private static final int REWARD_POTENTIAL_MAX = 1012;
-
-	public enum Mode
-	{
-		// look for plans that do not exceed the goal value
-		NEAREST,
-
-		// look for any plan that meets or exceeds the goal value
-		ANY,
-	}
-
 	@Nonnull
 	private Set<Monster> targetMonsters = ImmutableSet.of();
 
@@ -47,21 +36,20 @@ public final class RewardPlanner extends AStar<RewardPlan,Integer>
 	protected int getHScore( @Nonnull RewardPlan current, @Nonnull Integer target )
 	{
 		// hScore becomes the total reward potential of the current plan
-		return current.GetRewardPotential();
+		return current.getRewardPotential();
 	}
 
 	@Override
 	protected int getDScore( @Nonnull RewardPlan current, @Nonnull RewardPlan neighbor )
 	{
 		// dScore becomes the increase in reward potential compared to the current plan
-		return neighbor.GetRewardPotential() - current.GetRewardPotential();
+		return neighbor.getRewardPotential() - current.getRewardPotential();
 	}
 
 	@Override
 	protected boolean isGoal( @Nonnull RewardPlan current, @Nonnull Integer target )
 	{
-		// Clamp to REWARD_POTENTIAL_MAX, so we stop once we hit it
-		return current.GetRewardPotential() >= Math.min( target, REWARD_POTENTIAL_MAX );
+		return current.getRewardPotential() >= target;
 	}
 
 	@Override
@@ -70,11 +58,9 @@ public final class RewardPlanner extends AStar<RewardPlan,Integer>
 		// generate a list of all possible crypt monsters we could kill
 		val neighbors = new ArrayList<RewardPlan>();
 
-		val currentValue = current.GetRewardPotential();
-
 		for ( val brother : Monster.brothers )
 		{
-			if ( current.monsters.containsKey( brother ) )
+			if ( current.contains( brother ) )
 			{
 				// skip brothers that have already been killed
 				continue;
@@ -82,13 +68,15 @@ public final class RewardPlanner extends AStar<RewardPlan,Integer>
 
 			if ( targetMonsters.contains( brother ) )
 			{
-				neighbors.add( current.Append( brother ) );
+				neighbors.add( current.append( brother ) );
 			}
 		}
 
 		for ( val monster : Monster.cryptMonsters )
 		{
-			if ( currentValue + monster.getCombatLevel() > target )
+			val expectedRewardPotential = current.getRewardPotential() + monster.getCombatLevel();
+
+			if ( expectedRewardPotential > target )
 			{
 				// skip crypt monsters that would put us over the target score
 				continue;
@@ -96,7 +84,7 @@ public final class RewardPlanner extends AStar<RewardPlan,Integer>
 
 			if ( targetMonsters.contains( monster ) )
 			{
-				neighbors.add( current.Append( monster ) );
+				neighbors.add( current.append( monster ) );
 			}
 		}
 
