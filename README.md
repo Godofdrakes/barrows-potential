@@ -40,8 +40,12 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 * Added change notification for plugin updates
   * Happens once per update
 * Added support for selecting which monsters to consider for the planner
-  * If you just want to do "Skele x2, Blood x1" every time you can do that now
+  * If you just want to do "Skeleton x2, Blood x1" every time you can do that now
 
 ### Version 3
 
-* Fixed case where overlay would be visible outside of the crypt
+* Fixed case where overlay would be visible outside the crypt
+
+### Version 4
+
+* Fixed case where overlay could be visible while the plugin was disabled
