@@ -73,7 +73,7 @@ public enum Monster
 	{
 		return getVarbit() != 0;
 	}
-	
+
 	public final int getRewardPotential()
 	{
 		if ( isBrother() )
@@ -85,9 +85,9 @@ public enum Monster
 		return getCombatLevel();
 	}
 
-	private static Map<Integer,Monster> getCryptMonstersByNpcID()
+	private static Map<Integer, Monster> getCryptMonstersByNpcID()
 	{
-		HashMap<Integer,Monster> map = new HashMap<>();
+		HashMap<Integer, Monster> map = new HashMap<>();
 
 		for ( Monster monster : Monster.cryptMonsters )
 		{
@@ -102,9 +102,9 @@ public enum Monster
 		return ImmutableMap.copyOf( map );
 	}
 
-	private static Map<Integer,Monster> getBrothersByVarbit()
+	private static Map<Integer, Monster> getBrothersByVarbit()
 	{
-		HashMap<Integer,Monster> map = new HashMap<>();
+		HashMap<Integer, Monster> map = new HashMap<>();
 
 		for ( Monster monster : Monster.brothers )
 		{
@@ -134,6 +134,6 @@ public enum Monster
 		GiantCryptSpider
 	);
 
-	public static final Map<Integer,Monster> cryptMonsterByNpcID = getCryptMonstersByNpcID();
-	public static final Map<Integer,Monster> brothersByVarbit = getBrothersByVarbit();
+	public static final Map<Integer, Monster> cryptMonsterByNpcID = getCryptMonstersByNpcID();
+	public static final Map<Integer, Monster> brothersByVarbit = getBrothersByVarbit();
 }

@@ -121,6 +121,8 @@ public class RewardPlannerTest extends TestCase
 
 		if ( plan == null )
 		{
+			logger.info( "taking partial plan" );
+
 			plan = planner.takeBest();
 		}
 

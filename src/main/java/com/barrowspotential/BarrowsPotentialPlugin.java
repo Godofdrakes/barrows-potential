@@ -259,7 +259,7 @@ public class BarrowsPotentialPlugin extends Plugin
 				{
 					val count = entry.getValue();
 					val name = entry.getKey().getDisplayName();
-					val value = entry.getKey().getCombatLevel() * count;
+					val value = entry.getKey().getRewardPotential() * count;
 					log.debug( "x{} {} ({})", count, name, value );
 
 					npcOverlay.addOptimal( entry.getKey() );
