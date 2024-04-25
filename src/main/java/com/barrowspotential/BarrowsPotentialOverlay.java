@@ -46,9 +46,9 @@ public final class BarrowsPotentialOverlay extends Overlay
 	@Inject
 	public BarrowsPotentialOverlay( @NonNull OverlayManager overlayManager )
 	{
-		setPosition( OverlayPosition.TOP_LEFT );
-		setPriority( 1.f );
-
+		this.setPriority( 1.f );
+		this.setPosition( OverlayPosition.TOP_LEFT );
+		this.panelComponent.setPreferredSize( new Dimension( 150, 0 ) );
 		this.overlayManager = overlayManager;
 	}
 
@@ -85,8 +85,6 @@ public final class BarrowsPotentialOverlay extends Overlay
 		@NonNull RewardTarget rewardTarget )
 	{
 		val component = new ProgressBarComponent();
-
-		component.setPreferredSize( new Dimension( 150, 0 ) );
 
 		component.setMinimum( 0 );
 		component.setMaximum( Math.min( REWARD_POTENTIAL_MAX, rewardTarget.getMaxValue() ) );
