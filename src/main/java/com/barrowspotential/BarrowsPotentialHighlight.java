@@ -43,7 +43,7 @@ public final class BarrowsPotentialHighlight
 
 	public BarrowsPotentialHighlight dispose()
 	{
-		overlayService.registerHighlighter( this::getNpcHighlight );
+		overlayService.unregisterHighlighter( this::getNpcHighlight );
 
 		return this;
 	}
