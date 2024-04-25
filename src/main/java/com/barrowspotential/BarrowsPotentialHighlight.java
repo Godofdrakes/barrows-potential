@@ -6,6 +6,7 @@ import net.runelite.api.NPC;
 import net.runelite.client.game.npcoverlay.HighlightedNpc;
 import net.runelite.client.game.npcoverlay.NpcOverlayService;
 
+import javax.annotation.Nullable;
 import javax.inject.Inject;
 import java.awt.*;
 import java.util.Set;
@@ -13,19 +14,22 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class BarrowsPotentialHighlight
 {
-	private final Set<Integer> npcHighlights = ConcurrentHashMap.newKeySet();
+	// Brothers are already highlighted by the game/built-in plugin. We don't need to add to that.
+	private static final Set<Monster> ignoredNpcs = Monster.brothers;
+
 	private final Set<Integer> npcHighlightsOptimal = ConcurrentHashMap.newKeySet();
-
-	// https://stackoverflow.com/questions/3964211/when-to-use-atomicreference-in-java
-	// Supposedly reference assignment is already atomic so use of AtomicReference shouldn't be necessary
-
-	private volatile Color highlightColor = null;
-	private volatile Color highlightColorOptimal = null;
-
+	private final Set<Integer> npcHighlights = ConcurrentHashMap.newKeySet();
 	private final NpcOverlayService overlayService;
 
+	// https://stackoverflow.com/questions/3964211/when-to-use-atomicreference-in-java
+	// Supposedly reference assignment is already atomic so use of AtomicReference shouldn't be necessary.
+	// Use of volatile keyword ensures compiler does not make read/write optimizations.
+
+	private volatile Color highlightColorOptimal = null;
+	private volatile Color highlightColor = null;
+
 	@Inject
-	public BarrowsPotentialHighlight( @NonNull final NpcOverlayService overlayService )
+	public BarrowsPotentialHighlight( @NonNull NpcOverlayService overlayService )
 	{
 		this.overlayService = overlayService;
 	}
@@ -44,24 +48,36 @@ public final class BarrowsPotentialHighlight
 		return this;
 	}
 
-	private Color getNpcHighlightColor( final NPC npc )
+	private Color getNpcHighlightColor( @NonNull NPC npc )
 	{
+		// get-check-return pattern to avoid race conditions
+
 		if ( npcHighlightsOptimal.contains( npc.getId() ) )
 		{
-			return highlightColorOptimal;
+			val color = this.highlightColorOptimal;
+
+			if ( color != null )
+			{
+				return color;
+			}
 		}
 
 		if ( npcHighlights.contains( npc.getId() ) )
 		{
-			return highlightColor;
+			val color = this.highlightColor;
+
+			if ( color != null )
+			{
+				return color;
+			}
 		}
 
 		return null;
 	}
 
-	private HighlightedNpc getNpcHighlight( NPC npc )
+	private HighlightedNpc getNpcHighlight( @NonNull NPC npc )
 	{
-		final Color color = getNpcHighlightColor( npc );
+		val color = getNpcHighlightColor( npc );
 
 		if ( color != null )
 		{
@@ -75,41 +91,47 @@ public final class BarrowsPotentialHighlight
 		return null;
 	}
 
-	public BarrowsPotentialHighlight setHighlightColor( final Color color )
+	public BarrowsPotentialHighlight setHighlightColor( @Nullable Color color )
 	{
 		highlightColor = color;
 
 		return this;
 	}
 
-	public BarrowsPotentialHighlight setHighlightOptimalColor( final Color color )
+	public BarrowsPotentialHighlight setHighlightOptimalColor( @Nullable Color color )
 	{
 		highlightColorOptimal = color;
 
 		return this;
 	}
 
-	public BarrowsPotentialHighlight add( final Monster monster )
+	public BarrowsPotentialHighlight add( @NonNull Monster monster )
 	{
-		for ( val npcId : monster.getNpcIDs() )
+		if ( !ignoredNpcs.contains( monster ) )
 		{
-			npcHighlights.add( npcId );
+			for ( val npcId : monster.getNpcIDs() )
+			{
+				npcHighlights.add( npcId );
+			}
 		}
 
 		return this;
 	}
 
-	public BarrowsPotentialHighlight addOptimal( final Monster monster )
+	public BarrowsPotentialHighlight addOptimal( @NonNull Monster monster )
 	{
-		for ( val npcId : monster.getNpcIDs() )
+		if ( !ignoredNpcs.contains( monster ) )
 		{
-			npcHighlightsOptimal.add( npcId );
+			for ( val npcId : monster.getNpcIDs() )
+			{
+				npcHighlightsOptimal.add( npcId );
+			}
 		}
 
 		return this;
 	}
 
-	public BarrowsPotentialHighlight addAll( final Iterable<Monster> monsters )
+	public BarrowsPotentialHighlight addAll( @NonNull Iterable<Monster> monsters )
 	{
 		for ( val monster : monsters )
 		{
@@ -119,7 +141,7 @@ public final class BarrowsPotentialHighlight
 		return this;
 	}
 
-	public BarrowsPotentialHighlight addAllOptimal( final Iterable<Monster> monsters )
+	public BarrowsPotentialHighlight addAllOptimal( @NonNull Iterable<Monster> monsters )
 	{
 		for ( val monster : monsters )
 		{
@@ -131,8 +153,8 @@ public final class BarrowsPotentialHighlight
 
 	public BarrowsPotentialHighlight clear()
 	{
-		npcHighlights.clear();
 		npcHighlightsOptimal.clear();
+		npcHighlights.clear();
 
 		return this;
 	}

@@ -11,13 +11,18 @@ import net.runelite.client.ui.overlay.components.PanelComponent;
 import net.runelite.client.ui.overlay.components.ProgressBarComponent;
 import net.runelite.client.ui.overlay.components.TitleComponent;
 
+import javax.annotation.Nonnegative;
 import javax.inject.Inject;
 import java.awt.*;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class BarrowsPotentialOverlay extends Overlay
 {
+	// Brothers are already tracked by the game/built-in plugin. We don't need to add to that.
+	private static final Set<Monster> ignoredNpcs = Monster.brothers;
+
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
 	private final PanelComponent panelComponent = new PanelComponent();
@@ -27,20 +32,19 @@ public final class BarrowsPotentialOverlay extends Overlay
 		.color( Color.white )
 		.build();
 
-	private ProgressBarComponent progressBarComponent = new ProgressBarComponent();
-
 	private final AtomicBoolean isVisible = new AtomicBoolean( false );
 	private final AtomicBoolean isInCrypt = new AtomicBoolean( false );
-
 	private final OverlayManager overlayManager;
 
 	// https://stackoverflow.com/questions/3964211/when-to-use-atomicreference-in-java
-	// Supposedly reference assignment is already atomic so use of AtomicReference shouldn't be necessary
+	// Supposedly reference assignment is already atomic so use of AtomicReference shouldn't be necessary.
+	// Use of volatile keyword ensures compiler does not make read/write optimizations.
 
-	private Map<Monster,Integer> plan = ImmutableMap.of();
+	private volatile ProgressBarComponent progressBarComponent = new ProgressBarComponent();
+	private volatile Map<Monster, Integer> plan = ImmutableMap.of();
 
 	@Inject
-	public BarrowsPotentialOverlay( @NonNull final OverlayManager overlayManager )
+	public BarrowsPotentialOverlay( @NonNull OverlayManager overlayManager )
 	{
 		setPosition( OverlayPosition.TOP_LEFT );
 		setPriority( 1.f );
@@ -50,14 +54,14 @@ public final class BarrowsPotentialOverlay extends Overlay
 
 	public BarrowsPotentialOverlay connect()
 	{
-		this.overlayManager.add( this );
+		overlayManager.add( this );
 
 		return this;
 	}
 
 	public BarrowsPotentialOverlay dispose()
 	{
-		this.overlayManager.remove( this );
+		overlayManager.remove( this );
 
 		return this;
 	}
@@ -69,22 +73,27 @@ public final class BarrowsPotentialOverlay extends Overlay
 		return this;
 	}
 
-	public BarrowsPotentialOverlay setOptimalMonsters( @NonNull final Map<Monster,Integer> monsters )
+	public BarrowsPotentialOverlay setOptimalMonsters( @NonNull Map<Monster, Integer> monsters )
 	{
 		plan = ImmutableMap.copyOf( monsters );
 
 		return this;
 	}
 
-	public BarrowsPotentialOverlay setRewardDisplay( int rewardPotential, RewardTarget rewardTarget )
+	public BarrowsPotentialOverlay setRewardDisplay(
+		@Nonnegative int rewardPotential,
+		@NonNull RewardTarget rewardTarget )
 	{
 		val component = new ProgressBarComponent();
 
+		component.setPreferredSize( new Dimension( 150, 0 ) );
+
 		component.setMinimum( 0 );
-		component.setForegroundColor( Color.blue );
-		component.setLabelDisplayMode( ProgressBarComponent.LabelDisplayMode.TEXT_ONLY );
 		component.setMaximum( Math.min( REWARD_POTENTIAL_MAX, rewardTarget.getMaxValue() ) );
 		component.setValue( rewardPotential );
+		component.setForegroundColor( Color.blue );
+
+		component.setLabelDisplayMode( ProgressBarComponent.LabelDisplayMode.TEXT_ONLY );
 		component.setCenterLabel( Integer.toString( rewardPotential ) );
 
 		if ( rewardPotential > rewardTarget.getMaxValue() )
@@ -105,14 +114,14 @@ public final class BarrowsPotentialOverlay extends Overlay
 		return this;
 	}
 
-	public BarrowsPotentialOverlay setVisibility( final boolean value )
+	public BarrowsPotentialOverlay setVisibility( boolean value )
 	{
 		isVisible.set( value );
 
 		return this;
 	}
 
-	public BarrowsPotentialOverlay setIsInCrypt( final boolean value )
+	public BarrowsPotentialOverlay setIsInCrypt( boolean value )
 	{
 		isInCrypt.set( value );
 
@@ -135,21 +144,15 @@ public final class BarrowsPotentialOverlay extends Overlay
 		}
 
 		panelComponent.getChildren().clear();
-
-		panelComponent.setPreferredSize( new Dimension(
-			150,
-			0
-		) );
-
 		panelComponent.getChildren().add( titleComponent );
-
 		panelComponent.getChildren().add( progressBarComponent );
 
-		for ( final Map.Entry<Monster,Integer> entry : currentPlan.entrySet() )
+		for ( final Map.Entry<Monster, Integer> entry : currentPlan.entrySet() )
 		{
-			// the default barrows plugin already tracks brothers
-			if ( entry.getKey().isBrother() )
+			if ( ignoredNpcs.contains( entry.getKey() ) )
+			{
 				continue;
+			}
 
 			panelComponent.getChildren().add( LineComponent.builder()
 				.left( String.format( "x%d:", entry.getValue() ) )

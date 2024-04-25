@@ -72,13 +72,18 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		npcOverlay.connect()
-			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
-			.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
+		// startUp/shutDown run on the ??? (I'm not actually sure, but it trips isClientThread checks) thread.
+		// Push initial config and then queue an update on the client thread.
 
-		screenOverlay.connect()
+		npcOverlay
+			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+			.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null )
+			.connect();
+
+		screenOverlay
 			.setIsInCrypt( isInCrypt() )
-			.setVisibility( config.overlayOptimal() );
+			.setVisibility( config.overlayOptimal() )
+			.connect();
 
 		queueUpdatePlan();
 	}
@@ -86,6 +91,9 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void shutDown()
 	{
+		// Remove the overlay/highlight objects from the client.
+		// There might still be an update queued, but it won't affect the client after this point.
+
 		npcOverlay.dispose();
 		screenOverlay.dispose();
 	}
@@ -139,6 +147,10 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Subscribe
 	public void onConfigChanged( ConfigChanged event )
 	{
+		// onConfigChanged gets run from the UI thread, not the client thread.
+		// Must take care touching data that could be in use on another thread.
+		// Trying to avoid scope-locks so generally this means atomic operations only.
+
 		if ( event.getGroup().equals( "barrowspotential" ) )
 		{
 			log.debug( "config changed" );
@@ -151,59 +163,60 @@ public class BarrowsPotentialPlugin extends Plugin
 			screenOverlay
 				.setVisibility( config.overlayOptimal() );
 
-			clientThread.invokeLater( this::updatePlan );
+			queueUpdatePlan();
 		}
-	}
-
-	private boolean isBrotherDefeated( Monster target )
-	{
-		assert target.isBrother();
-		return client.getVarbitValue( target.getVarbit() ) == 1;
 	}
 
 	private RewardPlan getBasePlan()
 	{
+		// In order to avoid tracking every single NPC the player defeats we just track brothers.
+		// We then use that information to calculate the player's current reward potential.
+		// These together result in an initial world state we can plan off of.
+
+		int rewardPotential = client.getVarbitValue( Varbits.BARROWS_REWARD_POTENTIAL );
+
 		val brothers = new ArrayList<Monster>();
 
 		for ( val brother : Monster.brothers )
 		{
-			if ( isBrotherDefeated( brother ) )
+			assert brother.getVarbit() != 0;
+
+			val isDefeated = client.getVarbitValue( brother.getVarbit() ) == 1;
+
+			if ( isDefeated )
 			{
+				rewardPotential += 2;
+
 				brothers.add( brother );
 			}
 		}
 
-		return RewardPlan.create( brothers, getRewardPotential() );
+		return RewardPlan.create( brothers, rewardPotential );
 	}
 
 	private void updatePlan()
 	{
-		assert ( client.isClientThread() );
+		assert client.isClientThread();
 
 		npcOverlay.clear();
 		screenOverlay.clear();
 
-		val rewardPotential = getRewardPotential();
+		val currentPlan = getBasePlan();
 
 		val targetReward = config.rewardTarget();
 		val targetMonsters = config.rewardPlan();
 
 		val targetPotentialClamped = Math.min( REWARD_POTENTIAL_MAX, targetReward.getMaxValue() );
-		val targetPotentialMet = rewardPotential >= targetPotentialClamped;
+		val targetPotentialMet = currentPlan.getRewardPotential() >= targetPotentialClamped;
 
-		log.warn( "reward potential {}", rewardPotential );
-		log.warn( "target potential {}", targetPotentialClamped );
+		log.debug( "reward potential {}", currentPlan.getRewardPotential() );
+		log.debug( "target potential {}", targetPotentialClamped );
 
 		if ( !targetPotentialMet )
 		{
 			for ( val monster : targetMonsters )
 			{
-				if ( monster.isBrother() )
-				{
-					continue;
-				}
-
-				val expectedRewardPotential = rewardPotential + monster.getCombatLevel();
+				val expectedRewardPotential = currentPlan.getRewardPotential() + monster.getCombatLevel();
 
 				if ( expectedRewardPotential > targetReward.getMaxValue() )
 				{
@@ -219,7 +232,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			// Find a plan that gets us from our current reward potential to the target
 			// This plan must only include the monsters/brothers we have selected
 
-			planner.reset( getBasePlan(), targetPotentialClamped );
+			planner.reset( currentPlan, targetPotentialClamped );
 			planner.setTargetMonsters( config.rewardPlan() );
 
 			val plan = planner.search( PLANNER_ITERATIONS_MAX );
@@ -234,7 +247,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			{
 				val planValue = plan.getRewardPotential();
 
-				log.warn( "planned reward potential: {}", planValue );
+				log.debug( "planned reward potential: {}", planValue );
 
 				if ( planValue < targetReward.getMinValue() )
 				{
@@ -258,7 +271,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		npcOverlay.rebuild();
 
-		screenOverlay.setRewardDisplay( rewardPotential, config.rewardTarget() );
+		screenOverlay.setRewardDisplay( currentPlan.getRewardPotential(), config.rewardTarget() );
 
 		updatePending.set( false );
 	}
@@ -280,22 +293,6 @@ public class BarrowsPotentialPlugin extends Plugin
 		return getRegionID() == CRYPT_REGION_ID;
 	}
 
-	public int getRewardPotential()
-	{
-		int value = client.getVarbitValue( Varbits.BARROWS_REWARD_POTENTIAL );
-
-		for ( Monster brother : Monster.brothers )
-		{
-			// each brother adds 2 to the final reward potential
-			if ( isBrotherDefeated( brother ) )
-			{
-				value += 2;
-			}
-		}
-
-		return value;
-	}
-
 	// Check if the plugin has updated since the last time the user logged in
 	// queue a message notifying of changes if so
 	private void updateCheck()
@@ -307,7 +304,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		if ( version == null )
 		{
-			log.debug( "last plugin version unknown. assuming release." );
+			log.warn( "last plugin version unknown. assuming release." );
 
 			version = PLUGIN_VERSION_RELEASE;
 		}
@@ -320,7 +317,7 @@ public class BarrowsPotentialPlugin extends Plugin
 			return;
 		}
 
-		log.debug( "plugin version changed. queuing update message." );
+		log.warn( "plugin version changed. queuing update message." );
 
 		final String message = "Barrows Potential has been updated. See Github page for details.";
 

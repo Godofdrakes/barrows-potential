@@ -15,7 +15,7 @@ import java.util.Set;
 // this only considers crypt monsters as possible nodes.
 // any brothers the player wants to kill should be fed to Reset() as the starting plan.
 @Slf4j
-public final class RewardPlanner extends AStar<RewardPlan,Integer>
+public final class RewardPlanner extends AStar<RewardPlan, Integer>
 {
 	@Nonnull
 	private Set<Monster> targetMonsters = ImmutableSet.of();
@@ -107,13 +107,13 @@ public final class RewardPlanner extends AStar<RewardPlan,Integer>
 				break;
 		}
 
-		log.warn( "planner ran for {} iterations", iterations );
+		log.debug( "planner ran for {} iterations", iterations );
 
 		if ( plan == null )
 		{
 			// We failed to get a plan that _exactly_ matches the target within the iteration limit
 			// Just take the best plan the planner could come up with
-			log.warn( "taking partial plan" );
+			log.debug( "taking partial plan" );
 
 			plan = takeBest();
 		}
