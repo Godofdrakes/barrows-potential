@@ -48,4 +48,5 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 
 ### Version 4
 
-* Fixed case where overlay could be visible while the plugin was disabled
+* Rewrote overlay and highlight implementation
+  * Fixed case where overlay/highlight could be visible while the plugin was disabled
