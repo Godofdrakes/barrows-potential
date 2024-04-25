@@ -50,3 +50,4 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 
 * Rewrote overlay and highlight implementation
   * Fixed case where overlay/highlight could be visible while the plugin was disabled
+  * Overlay label now matches plugin name so people know who's to blame if it breaks (me)
