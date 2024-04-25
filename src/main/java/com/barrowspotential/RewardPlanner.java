@@ -72,6 +72,12 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 			}
 		}
 
+		if ( !neighbors.isEmpty() )
+		{
+			// If there are any brothers remaining always plan for those first
+			return neighbors;
+		}
+
 		for ( val monster : Monster.cryptMonsters )
 		{
 			val expectedRewardPotential = current.getRewardPotential() + monster.getCombatLevel();

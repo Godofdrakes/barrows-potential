@@ -9,7 +9,9 @@ import junit.framework.TestCase;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nonnull;
 import java.util.EnumSet;
+import java.util.HashMap;
 import java.util.Map;
 
 public class RewardPlannerTest extends TestCase
@@ -32,31 +34,30 @@ public class RewardPlannerTest extends TestCase
 			.append( Monster.CryptSpider );
 	}
 
-	private static void LogPlan( Logger logger, RewardPlan plan )
+	private static void LogPlan( @Nonnull Logger logger, @Nonnull RewardPlan plan )
 	{
-		assert ( plan != null );
+		final int score = plan.getRewardPotential();
+		final int steps = plan.getMonsters().values().stream()
+			.mapToInt( i -> i )
+			.sum();
 
-		int steps = 0;
-		int score = 0;
-
-		for ( final Map.Entry<Monster,Integer> entry : plan.getMonsters().entrySet() )
+		for ( final Map.Entry<Monster, Integer> entry : plan.getMonsters().entrySet() )
 		{
 			final int count = entry.getValue();
 			final int value = entry.getKey().getCombatLevel() * count;
 			final String displayName = entry.getKey().getDisplayName();
 			logger.info( "x{} {} ({})", count, displayName, value );
-
-			steps += count;
-			score += value;
-
-			if ( entry.getKey().isBrother() )
-			{
-				score += 2;
-			}
 		}
 
 		logger.info( "Steps: {}", steps );
 		logger.info( "Score: {}", score );
+	}
+
+	private static void LogTarget( @Nonnull Logger logger, @Nonnull RewardTarget rewardTarget )
+	{
+		logger.info( "Target    : {}", rewardTarget.getDisplayName() );
+		logger.info( "Target Min: {}", rewardTarget.getMinValue() );
+		logger.info( "Target Max: {}", rewardTarget.getMaxValue() );
 	}
 
 	private static RewardPlan RunPlanner( Logger logger, RewardPlanner planner, int maxIterations )
@@ -105,13 +106,12 @@ public class RewardPlannerTest extends TestCase
 	}
 
 	// assert that for the given base plan there is a valid plan to reach the target within 20 iterations
-	private static RewardPlan assertValidPlan( RewardPlanner planner,
-		Logger logger,
-		RewardTarget rewardTarget,
-		RewardPlan basePlan )
+	private static RewardPlan assertValidPlan(
+		@Nonnull RewardPlanner planner,
+		@Nonnull Logger logger,
+		@Nonnull RewardTarget rewardTarget,
+		@Nonnull RewardPlan basePlan )
 	{
-		assert planner != null;
-
 		logger.info( "searching for valid plan" );
 
 		planner.reset( basePlan, rewardTarget.getMaxValue() );
@@ -127,6 +127,7 @@ public class RewardPlannerTest extends TestCase
 		assertNotNull( plan );
 
 		LogPlan( logger, plan );
+		LogTarget( logger, rewardTarget );
 
 		assertTrue( "planned potential < minimum value",
 			plan.getRewardPotential() >= rewardTarget.getMinValue() );
@@ -189,6 +190,7 @@ public class RewardPlannerTest extends TestCase
 			Monster.Torag,
 			Monster.Verac
 		);
+
 		RewardPlan combatLevel115 = RewardPlan.create(
 			Monster.Ahrim,
 			//Monster.Dharok, // combat level 115
@@ -225,6 +227,39 @@ public class RewardPlannerTest extends TestCase
 		) );
 
 		RewardPlan basePlan = RewardPlan.create( Monster.brothers );
+
+		assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
+	}
+
+	// If there is a brother missing always plan for it first.
+	// Avoids case where plan goes over score because we did mob then brother instead of brother than mob.
+	public void testOneMissing()
+	{
+		RewardPlanner planner = new RewardPlanner();
+
+		planner.setTargetMonsters( EnumSet.of(
+			Monster.Ahrim,
+			Monster.Dharok,
+			Monster.Guthan,
+			Monster.Karil,
+			Monster.Torag,
+			Monster.Verac,
+			Monster.Bloodworm,
+			Monster.GiantCryptRat,
+			Monster.Skeleton,
+			Monster.GiantCryptSpider
+		) );
+
+		final Map<Monster, Integer> map = new HashMap<>();
+
+		map.put( Monster.Ahrim, 1 );
+//		map.put( Monster.Dharok, 1 );
+		map.put( Monster.Guthan, 1 );
+		map.put( Monster.Karil, 1 );
+		map.put( Monster.Torag, 1 );
+		map.put( Monster.Verac, 1 );
+
+		final RewardPlan basePlan = new RewardPlan( map, 680 );
 
 		assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
 	}
