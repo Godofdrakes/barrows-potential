@@ -6,6 +6,8 @@ import lombok.val;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
+import java.util.Arrays;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -58,6 +60,9 @@ public final class RewardPlan
 
 	private final ImmutableMap<Monster,Integer> monsters;
 
+	// Won't always match the total reward potential of the above map.
+	// We don't track non-brother monsters the player has previously defeated.
+	// This results in the score going up but the known monsters defeated not changing.
 	private final int rewardPotential;
 
 	public RewardPlan( @Nonnull Map<Monster,Integer> monsters, @Nonnegative int rewardPotential )
@@ -86,6 +91,24 @@ public final class RewardPlan
 		val newRewardPotential = this.rewardPotential + monster.getRewardPotential();
 
 		return new RewardPlan( map, newRewardPotential );
+	}
+
+	public RewardPlan insert( @Nonnull Iterable<Monster> monsters )
+	{
+		// Calc how much reward potential is from defeated monsters that we didn't track
+		val rewardPotentialPlanned = calculateRewardPotential( this.monsters );
+		val rewardPotentialBonus = this.rewardPotential - rewardPotentialPlanned;
+
+		val map = new HashMap<>( this.monsters );
+
+		for ( val monster : monsters )
+		{
+			map.putIfAbsent( monster, 1 );
+		}
+
+		val rewardPotentialNew = calculateRewardPotential( map ) + rewardPotentialBonus;
+
+		return new RewardPlan( map, rewardPotentialNew );
 	}
 
 	@Override

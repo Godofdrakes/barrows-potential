@@ -17,6 +17,7 @@ import net.runelite.client.events.ConfigChanged;
 import net.runelite.client.plugins.Plugin;
 import net.runelite.client.plugins.PluginDescriptor;
 
+import javax.annotation.Nonnull;
 import javax.inject.Inject;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -167,7 +168,8 @@ public class BarrowsPotentialPlugin extends Plugin
 		}
 	}
 
-	private RewardPlan getBasePlan()
+	// Get the current game state as a plan
+	private RewardPlan getCurrentPlan()
 	{
 		// In order to avoid tracking every single NPC the player defeats we just track brothers.
 		// We then use that information to calculate the player's current reward potential.
@@ -194,6 +196,16 @@ public class BarrowsPotentialPlugin extends Plugin
 		return RewardPlan.create( brothers, rewardPotential );
 	}
 
+	// Get the expected plan, appending any brothers the user plans on defeating
+	private RewardPlan getConfigPlan( @Nonnull RewardPlan currentPlan )
+	{
+		val configPlan = EnumSet.copyOf( config.rewardPlan() );
+
+		configPlan.retainAll( Monster.brothers );
+
+		return currentPlan.insert( configPlan );
+	}
+
 	private void updatePlan()
 	{
 		assert client.isClientThread();
@@ -201,7 +213,7 @@ public class BarrowsPotentialPlugin extends Plugin
 		npcOverlay.clear();
 		screenOverlay.clear();
 
-		val currentPlan = getBasePlan();
+		val currentPlan = getCurrentPlan();
 
 		val targetReward = config.rewardTarget();
 		val targetMonsters = config.rewardPlan();
@@ -212,27 +224,29 @@ public class BarrowsPotentialPlugin extends Plugin
 		log.debug( "reward potential {}", currentPlan.getRewardPotential() );
 		log.debug( "target potential {}", targetPotentialClamped );
 
-		if ( !targetPotentialMet )
+		val configPlan = getConfigPlan( currentPlan );
+
+		for ( val monster : targetMonsters )
 		{
-			for ( val monster : targetMonsters )
+			val expectedRewardPotential = configPlan.getRewardPotential() + monster.getCombatLevel();
+
+			if ( expectedRewardPotential > targetReward.getMaxValue() )
 			{
-				val expectedRewardPotential = currentPlan.getRewardPotential() + monster.getCombatLevel();
-
-				if ( expectedRewardPotential > targetReward.getMaxValue() )
-				{
-					// Don't highlight monsters that would put us over the target
-					continue;
-				}
-
-				npcOverlay.add( monster );
+				// Don't highlight monsters that would put us over the target
+				continue;
 			}
 
+			npcOverlay.add( monster );
+		}
+
+		if ( !targetPotentialMet )
+		{
 			val planner = new RewardPlanner();
 
 			// Find a plan that gets us from our current reward potential to the target
 			// This plan must only include the monsters/brothers we have selected
 
-			planner.reset( currentPlan, targetPotentialClamped );
+			planner.reset( configPlan, targetPotentialClamped );
 			planner.setTargetMonsters( config.rewardPlan() );
 
 			val plan = planner.search( PLANNER_ITERATIONS_MAX );
