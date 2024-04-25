@@ -11,6 +11,7 @@ import javax.inject.Inject;
 import java.awt.*;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.Function;
 
 public final class BarrowsPotentialHighlight
 {
@@ -19,6 +20,9 @@ public final class BarrowsPotentialHighlight
 
 	private final Set<Integer> npcHighlightsOptimal = ConcurrentHashMap.newKeySet();
 	private final Set<Integer> npcHighlights = ConcurrentHashMap.newKeySet();
+	// The highlight function must be stored as a Function<>, the same type the overlayService uses.
+	// Function<> equality is just object reference equality. We need to have the original object to remove it.
+	private final Function<NPC, HighlightedNpc> highlightFunction;
 	private final NpcOverlayService overlayService;
 
 	// https://stackoverflow.com/questions/3964211/when-to-use-atomicreference-in-java
@@ -31,19 +35,20 @@ public final class BarrowsPotentialHighlight
 	@Inject
 	public BarrowsPotentialHighlight( @NonNull NpcOverlayService overlayService )
 	{
+		this.highlightFunction = this::getNpcHighlight;
 		this.overlayService = overlayService;
 	}
 
 	public BarrowsPotentialHighlight connect()
 	{
-		overlayService.registerHighlighter( this::getNpcHighlight );
+		overlayService.registerHighlighter( highlightFunction );
 
 		return this;
 	}
 
 	public BarrowsPotentialHighlight dispose()
 	{
-		overlayService.unregisterHighlighter( this::getNpcHighlight );
+		overlayService.unregisterHighlighter( highlightFunction );
 
 		return this;
 	}
