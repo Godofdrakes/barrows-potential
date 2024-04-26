@@ -187,6 +187,8 @@ public class BarrowsPotentialPlugin extends Plugin
 
 			if ( isDefeated )
 			{
+				// The bonus for each brother killed isn't included in the varbit.
+				// Add it here so we're working with the actual final result.
 				rewardPotential += 2;
 
 				brothers.add( brother );
