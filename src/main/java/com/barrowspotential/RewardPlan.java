@@ -58,6 +58,8 @@ public final class RewardPlan
 			.sum();
 	}
 
+	public static final RewardPlan empty = new RewardPlan();
+
 	private final ImmutableMap<Monster,Integer> monsters;
 
 	// Won't always match the total reward potential of the above map.
@@ -75,6 +77,12 @@ public final class RewardPlan
 	{
 		this.monsters = ImmutableMap.copyOf( monsters );
 		this.rewardPotential = calculateRewardPotential( this.monsters );
+	}
+
+	private RewardPlan()
+	{
+		this.monsters = ImmutableMap.of();
+		this.rewardPotential = 0;
 	}
 
 	public boolean contains( @Nonnull Monster monster )
@@ -137,5 +145,10 @@ public final class RewardPlan
 	public String toString()
 	{
 		return String.format( "Potential: %d", rewardPotential );
+	}
+	
+	public boolean isEmpty()
+	{
+		return this.monsters.isEmpty();
 	}
 }

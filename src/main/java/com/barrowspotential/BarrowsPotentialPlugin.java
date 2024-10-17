@@ -83,7 +83,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		screenOverlay
 			.setIsInCrypt( isInCrypt() )
-			.setVisibility( config.overlayOptimal() )
+			.setVisibility( config.overlayOptimal() && !config.rewardPlan().isEmpty() )
 			.connect();
 
 		queueUpdatePlan();
@@ -162,7 +162,7 @@ public class BarrowsPotentialPlugin extends Plugin
 				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
 
 			screenOverlay
-				.setVisibility( config.overlayOptimal() );
+				.setVisibility( config.overlayOptimal() && !config.rewardPlan().isEmpty() );
 
 			queueUpdatePlan();
 		}
@@ -201,11 +201,20 @@ public class BarrowsPotentialPlugin extends Plugin
 	// Get the expected plan, appending any brothers the user plans on defeating
 	private RewardPlan getConfigPlan( @Nonnull RewardPlan currentPlan )
 	{
-		val configPlan = EnumSet.copyOf( config.rewardPlan() );
+		val rewardPlan = config.rewardPlan();
 
-		configPlan.retainAll( Monster.brothers );
+		if ( !rewardPlan.isEmpty() )
+		{
+			val configPlan = EnumSet.copyOf( rewardPlan );
 
-		return currentPlan.insert( configPlan );
+			configPlan.retainAll( Monster.brothers );
+
+			return currentPlan.insert( configPlan );
+		}
+		else
+		{
+			return RewardPlan.empty;
+		}
 	}
 
 	private void updatePlan()
@@ -228,60 +237,63 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		val configPlan = getConfigPlan( currentPlan );
 
-		for ( val monster : targetMonsters )
+		if ( !configPlan.isEmpty() )
 		{
-			val expectedRewardPotential = configPlan.getRewardPotential() + monster.getCombatLevel();
-
-			if ( expectedRewardPotential > targetReward.getMaxValue() )
+			for ( val monster : targetMonsters )
 			{
-				// Don't highlight monsters that would put us over the target
-				continue;
+				val expectedRewardPotential = configPlan.getRewardPotential() + monster.getCombatLevel();
+
+				if ( expectedRewardPotential > targetReward.getMaxValue() )
+				{
+					// Don't highlight monsters that would put us over the target
+					continue;
+				}
+
+				npcOverlay.add( monster );
 			}
 
-			npcOverlay.add( monster );
-		}
-
-		if ( !targetPotentialMet )
-		{
-			val planner = new RewardPlanner();
-
-			// Find a plan that gets us from our current reward potential to the target
-			// This plan must only include the monsters/brothers we have selected
-
-			planner.reset( configPlan, targetPotentialClamped );
-			planner.setTargetMonsters( config.rewardPlan() );
-
-			val plan = planner.search( PLANNER_ITERATIONS_MAX );
-
-			if ( plan == null )
+			if ( !targetPotentialMet )
 			{
-				// In theory this will never happen
-				// At the very least the base plan we fed in will be returned
-				log.error( "plan was null" );
-			}
-			else
-			{
-				val planValue = plan.getRewardPotential();
+				val planner = new RewardPlanner();
 
-				log.debug( "planned reward potential: {}", planValue );
+				// Find a plan that gets us from our current reward potential to the target
+				// This plan must only include the monsters/brothers we have selected
 
-				if ( planValue < targetReward.getMinValue() )
+				planner.reset( configPlan, targetPotentialClamped );
+				planner.setTargetMonsters( config.rewardPlan() );
+
+				val plan = planner.search( PLANNER_ITERATIONS_MAX );
+
+				if ( plan == null )
 				{
 					// In theory this will never happen
-					log.warn( "plan does not meet target" );
+					// At the very least the base plan we fed in will be returned
+					log.error( "plan was null" );
 				}
-
-				for ( val entry : plan.getMonsters().entrySet() )
+				else
 				{
-					val count = entry.getValue();
-					val name = entry.getKey().getDisplayName();
-					val value = entry.getKey().getRewardPotential() * count;
-					log.debug( "x{} {} ({})", count, name, value );
+					val planValue = plan.getRewardPotential();
 
-					npcOverlay.addOptimal( entry.getKey() );
+					log.debug( "planned reward potential: {}", planValue );
+
+					if ( planValue < targetReward.getMinValue() )
+					{
+						// In theory this will never happen
+						log.warn( "plan does not meet target" );
+					}
+
+					for ( val entry : plan.getMonsters().entrySet() )
+					{
+						val count = entry.getValue();
+						val name = entry.getKey().getDisplayName();
+						val value = entry.getKey().getRewardPotential() * count;
+						log.debug( "x{} {} ({})", count, name, value );
+
+						npcOverlay.addOptimal( entry.getKey() );
+					}
+
+					screenOverlay.setOptimalMonsters( plan.getMonsters() );
 				}
-
-				screenOverlay.setOptimalMonsters( plan.getMonsters() );
 			}
 		}
 
