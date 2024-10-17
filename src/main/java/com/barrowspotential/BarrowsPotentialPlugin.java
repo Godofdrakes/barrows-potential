@@ -73,8 +73,7 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		// startUp/shutDown run on the ??? (I'm not actually sure, but it trips isClientThread checks) thread.
-		// Push initial config and then queue an update on the client thread.
+		// startUp/shutDown run on the ??? (I'm not actually sure, but it trips isClientThread checks) thread
 
 		npcOverlay
 			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
@@ -83,10 +82,8 @@ public class BarrowsPotentialPlugin extends Plugin
 
 		screenOverlay
 			.setIsInCrypt( isInCrypt() )
-			.setVisibility( config.overlayOptimal() && !config.rewardPlan().isEmpty() )
+			.setVisibility( config.overlayOptimal() )
 			.connect();
-
-		queueUpdatePlan();
 	}
 
 	@Override
@@ -162,7 +159,7 @@ public class BarrowsPotentialPlugin extends Plugin
 				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
 
 			screenOverlay
-				.setVisibility( config.overlayOptimal() && !config.rewardPlan().isEmpty() );
+				.setVisibility( config.overlayOptimal() );
 
 			queueUpdatePlan();
 		}
