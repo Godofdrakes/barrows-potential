@@ -315,7 +315,6 @@ public class RewardPlannerTest extends TestCase
 			potential += monster.getRewardPotential();
 		}
 
-		// reward potential of
 		final RewardPlan basePlan = new RewardPlan( map, potential );
 
 		assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
