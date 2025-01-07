@@ -1,6 +1,8 @@
 package com.barrowspotential;
 
 import com.google.common.collect.ImmutableSet;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -20,6 +22,10 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	@Nonnull
 	private Set<Monster> targetMonsters = ImmutableSet.of();
 
+	@Getter
+	@Setter
+	private int smallerPlanTolerance = 0;
+
 	@Inject
 	public RewardPlanner()
 	{
@@ -30,6 +36,12 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	public void setTargetMonsters( @Nonnull Set<Monster> monsters )
 	{
 		targetMonsters = ImmutableSet.copyOf( monsters );
+	}
+
+	@Override
+	protected int getSize( @Nonnull RewardPlan current )
+	{
+		return current.getSize();
 	}
 
 	@Override

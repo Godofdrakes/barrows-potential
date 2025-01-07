@@ -6,8 +6,6 @@ import lombok.val;
 
 import javax.annotation.Nonnegative;
 import javax.annotation.Nonnull;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -53,9 +51,9 @@ public final class RewardPlan
 	private static int calculateRewardPotential( @Nonnull Map<Monster,Integer> monsters )
 	{
 		return monsters.entrySet()
-			.stream()
-			.mapToInt( entry -> entry.getValue() * entry.getKey().getRewardPotential() )
-			.sum();
+				.stream()
+				.mapToInt( entry -> entry.getValue() * entry.getKey().getRewardPotential() )
+				.sum();
 	}
 
 	public static final RewardPlan empty = new RewardPlan();
@@ -119,6 +117,23 @@ public final class RewardPlan
 		return new RewardPlan( map, rewardPotentialNew );
 	}
 
+	public int getSize()
+	{
+		int i = 0;
+
+		Map<Monster, Integer> monstersMap = this.getMonsters();
+
+		if (monstersMap != null)
+		{
+			for (Map.Entry<Monster, Integer> entry : monstersMap.entrySet())
+			{
+				i += entry.getValue();
+			}
+		}
+
+		return i;
+	}
+
 	@Override
 	public int hashCode()
 	{
@@ -146,7 +161,7 @@ public final class RewardPlan
 	{
 		return String.format( "Potential: %d", rewardPotential );
 	}
-	
+
 	public boolean isEmpty()
 	{
 		return this.monsters.isEmpty();

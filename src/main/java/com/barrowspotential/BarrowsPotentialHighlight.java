@@ -87,10 +87,10 @@ public final class BarrowsPotentialHighlight
 		if ( color != null )
 		{
 			return HighlightedNpc.builder()
-				.hull( true )
-				.highlightColor( color )
-				.npc( npc )
-				.build();
+					.hull( true )
+					.highlightColor( color )
+					.npc( npc )
+					.build();
 		}
 
 		return null;
