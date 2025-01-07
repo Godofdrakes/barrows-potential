@@ -118,8 +118,8 @@ public abstract class AStar<TNode, TGoal>
 
 			int tolerance = getSmallerPlanTolerance();
 
-			// weight the plans which have a higher kill count (plan size) higher than
-			// those with lower but are within the tolerance set
+			// lower the weighting applied to plans which have a higher plan size than
+			// the best but are within the tolerance set
 			if ( tolerance > 0 )
 			{
 				int i = getSize( _best );
