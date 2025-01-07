@@ -49,11 +49,12 @@ public interface BarrowsPotentialConfig extends Config
 			keyName = "smallerPlanTolerance",
 			name = "Smaller Plan Tolerance",
 			description = "If this is greater than 0, the plan will prioritise smaller plans which have a reward potential that's " +
-					"within this tolerance. Allows for 2x bloodworm 1x skeleton tracking at 6 tolerance for example.",
+					"within this tolerance. Allows for 2x bloodworm 1x skeleton tracking at 6 tolerance for example. Tolerance is " +
+					"calculated from the reward target.",
 			section = plannerSection,
 			position = 2
 	)
-	default int smallerPlanTolerance() { return 6; }
+	default int smallerPlanTolerance() { return 0; }
 
 	@ConfigItem(
 			keyName = "highlightNpcs",
