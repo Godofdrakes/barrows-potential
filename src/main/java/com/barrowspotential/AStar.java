@@ -125,7 +125,7 @@ public abstract class AStar<TNode, TGoal>
 				int i = getSize( _best );
 				int j = getSize( neighbor );
 
-				if (j > i && Math.abs( getHScore(neighbor, _goal) - _hScore.get(_best) ) <= tolerance )
+				if ( j > i && Math.abs( getHScore(neighbor, _goal) - _hScore.get(_best) ) <= tolerance )
 				{
 					gScoreTemp -= (int) (( Math.log(j - i + 1) / Math.log(2) ) * tolerance );
 				}

@@ -123,9 +123,9 @@ public final class RewardPlan
 
 		Map<Monster, Integer> monstersMap = this.getMonsters();
 
-		if (monstersMap != null)
+		if ( monstersMap != null )
 		{
-			for (Map.Entry<Monster, Integer> entry : monstersMap.entrySet())
+			for ( Map.Entry<Monster, Integer> entry : monstersMap.entrySet() )
 			{
 				i += entry.getValue();
 			}
