@@ -41,7 +41,7 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	@Override
 	protected int getModifiedScore( @Nonnull RewardPlan best, @Nonnull RewardPlan neighbor, @Nonnull Integer goal, @Nonnull Integer gScoreTemp )
 	{
-		int tolerance = getSmallerPlanTolerance();
+		final int tolerance = getSmallerPlanTolerance();
 
 		if ( tolerance > 0 )
 		{
@@ -68,8 +68,7 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 		return gScoreTemp;
 	}
 
-	@Override
-	protected int getSize( @Nonnull RewardPlan current )
+	private int getSize( @Nonnull RewardPlan current )
 	{
 		return current.getSize();
 	}

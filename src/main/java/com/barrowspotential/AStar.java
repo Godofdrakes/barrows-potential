@@ -144,10 +144,10 @@ public abstract class AStar<TNode, TGoal>
 	}
 
 	// gets the modified score to adjust plan's weight depending on potential tolerance
-	protected abstract int getModifiedScore(@Nonnull TNode best, @Nonnull TNode neighbor, @Nonnull TGoal goal, @Nonnull Integer gScoreTemp);
-
-	// get size of plan
-	protected abstract int getSize( @Nonnull TNode current );
+	protected int getModifiedScore(@Nonnull TNode best, @Nonnull TNode neighbor, @Nonnull TGoal goal, @Nonnull Integer gScoreTemp)
+	{
+		return gScoreTemp;
+	}
 
 	// estimated cost to reach goal from current
 	protected abstract int getHScore( @Nonnull TNode current, @Nonnull TGoal goal );
