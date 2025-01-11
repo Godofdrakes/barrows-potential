@@ -37,7 +37,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
-	private static final int PLUGIN_VERSION = 4;
+	private static final int PLUGIN_VERSION = 5;
 	private static final int PLUGIN_VERSION_RELEASE = 1;
 
 	@Inject
