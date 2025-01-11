@@ -33,6 +33,7 @@ public class BarrowsPotentialPlugin extends Plugin
 	private static final int CRYPT_REGION_ID = 14231;
 
 	private static final int PLANNER_ITERATIONS_MAX = 20;
+	private static final int PLANNER_TOLERANCE = 3;
 
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
@@ -258,7 +259,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 				planner.reset( configPlan, targetPotentialClamped );
 				planner.setTargetMonsters( config.rewardPlan() );
-				planner.setSmallerPlanTolerance( config.smallerPlanTolerance() );
+				planner.setSmallerPlanTolerance( PLANNER_TOLERANCE );
 
 				val plan = planner.search( PLANNER_ITERATIONS_MAX );
 

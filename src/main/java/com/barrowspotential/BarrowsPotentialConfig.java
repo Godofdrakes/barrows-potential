@@ -46,17 +46,6 @@ public interface BarrowsPotentialConfig extends Config
 	default Set<Monster> rewardPlan() { return EnumSet.allOf( Monster.class ); }
 
 	@ConfigItem(
-			keyName = "smallerPlanTolerance",
-			name = "Smaller Plan Tolerance",
-			description = "If this is greater than 0, the plan will prioritise smaller plans which have a reward potential that's " +
-					"within this tolerance. Allows for 2x bloodworm 1x skeleton tracking at 6 tolerance for example. Tolerance is " +
-					"calculated from the reward target.",
-			section = plannerSection,
-			position = 2
-	)
-	default int smallerPlanTolerance() { return 0; }
-
-	@ConfigItem(
 			keyName = "highlightNpcs",
 			name = "Highlight NPCs",
 			description = "Highlight any NPC that would not exceed the target score",
