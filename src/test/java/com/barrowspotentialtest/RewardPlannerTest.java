@@ -15,7 +15,7 @@ public class RewardPlannerTest extends TestCase
 {
 	private static final int maxIterations = 20;
 
-	private static final int planTolerance = 0;
+	private static final int planTolerance = 6;
 
 	private final Logger logger = LoggerFactory.getLogger( RewardPlannerTest.class );
 
@@ -35,24 +35,20 @@ public class RewardPlannerTest extends TestCase
 				.append( Monster.CryptSpider );
 	}
 
-	private static RewardPlan AllBrothersSkeletonBloodwormBloodRune()
+	private static RewardPlan AllBrothersSkeletonBloodwormBloodRuneOptimal()
 	{
-		// The smallest plan to reach blood rune is 2 skeletons and 1 bloodworm if prioritising the smallest (874).
-		// Without tolerance configured, it is 4x bloodworm (876).
-		// This is calculated from plan target, not reward potential.
-
-		if ( planTolerance >= 6 )
-		{
-			return AllBrothers()
-					.append( Monster.Skeleton )
-					.append( Monster.Skeleton )
-					.append( Monster.Bloodworm );
-		}
-
 		return AllBrothers()
 				.append( Monster.Bloodworm )
 				.append( Monster.Bloodworm )
 				.append( Monster.Bloodworm )
+				.append( Monster.Bloodworm );
+	}
+
+	private static RewardPlan AllBrothersSkeletonBloodwormBloodRuneShortest()
+	{
+		return AllBrothers()
+				.append( Monster.Skeleton )
+				.append( Monster.Skeleton )
 				.append( Monster.Bloodworm );
 	}
 
@@ -168,7 +164,6 @@ public class RewardPlannerTest extends TestCase
 		RewardPlan basePlan = new RewardPlan( ImmutableMap.of() );
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		planner.reset( basePlan, RewardTarget.Coins.getMaxValue() );
 
@@ -181,7 +176,6 @@ public class RewardPlannerTest extends TestCase
 		logger.info("Test case: testOptiomalKillAll");
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		RewardPlan allBrothers = AllBrothers();
 
@@ -201,7 +195,6 @@ public class RewardPlannerTest extends TestCase
 		logger.info("Test case: testOptimalKillSingle");
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		RewardPlan combatLevel98 = RewardPlan.create( Monster.Ahrim );
 		RewardPlan combatLevel115 = RewardPlan.create( Monster.Dharok );
@@ -219,7 +212,6 @@ public class RewardPlannerTest extends TestCase
 		logger.info("Test case: testOptimalKillPartial");
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		RewardPlan combatLevel98 = RewardPlan.create(
 				//Monster.Ahrim, // combat level 98
@@ -250,12 +242,11 @@ public class RewardPlannerTest extends TestCase
 	// this is here because I was trying to figure out why restricting to skele+blood was planning blood x4
 	// it's because blood x4 is 876, skele x2 + blood x1 is only 874. blood x4 is "more optimal"
 	// leaving it here because it's useful for debugging if I decide to change the heuristic
-	public void testSkeletonBloodworm()
+	public void testSkeletonBloodwormOptimal()
 	{
-		logger.info("Test case: testSkeletonBloodworm");
+		logger.info("Test case: testSkeletonBloodworm - OPTIMAL");
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		planner.setTargetMonsters( EnumSet.of(
 				Monster.Ahrim,
@@ -273,7 +264,36 @@ public class RewardPlannerTest extends TestCase
 		RewardPlan plan = assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
 
 		// Confirm plan is as expected for max bloodrunes when bloodworms and skeletons are selected
-		assertEquals(plan, RewardPlannerTest.AllBrothersSkeletonBloodwormBloodRune());
+		assertEquals(plan, RewardPlannerTest.AllBrothersSkeletonBloodwormBloodRuneOptimal());
+	}
+
+	public void testSkeletonBloodwormShortest()
+	{
+		logger.info("Test case: testSkeletonBloodworm - SHORTEST");
+
+		RewardPlanner planner = new RewardPlanner();
+		// setting plan tolerance manually to (default 3), which is the best
+		// potential difference for shortest plan
+		planner.setSmallerPlanTolerance(planTolerance);
+
+		planner.setTargetMonsters( EnumSet.of(
+				Monster.Ahrim,
+				Monster.Dharok,
+				Monster.Guthan,
+				Monster.Karil,
+				Monster.Torag,
+				Monster.Verac,
+				Monster.Skeleton,
+				Monster.Bloodworm
+		) );
+
+		RewardPlan basePlan = RewardPlan.create( Monster.brothers );
+
+		RewardPlan plan = assertValidPlan( planner, logger, RewardTarget.BloodRune, basePlan );
+
+		// Confirm plan is as expected for max bloodrunes when bloodworms and skeletons
+		// are selected and shortest approach is preferred
+		assertEquals(plan, RewardPlannerTest.AllBrothersSkeletonBloodwormBloodRuneShortest());
 	}
 
 	// If there is a brother missing always plan for it first.
@@ -285,7 +305,6 @@ public class RewardPlannerTest extends TestCase
 		int potential = 0;
 
 		RewardPlanner planner = new RewardPlanner();
-		planner.setSmallerPlanTolerance(planTolerance);
 
 		planner.setTargetMonsters( EnumSet.of(
 				Monster.Ahrim,

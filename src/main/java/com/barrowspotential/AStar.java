@@ -116,20 +116,7 @@ public abstract class AStar<TNode, TGoal>
 		{
 			int gScoreTemp = _gScore.get( current ) + getDScore( current, neighbor );
 
-			int tolerance = getSmallerPlanTolerance();
-
-			// lower the weighting applied to plans which have a higher plan size than
-			// the best but are within the tolerance set
-			if ( tolerance > 0 )
-			{
-				int i = getSize( _best );
-				int j = getSize( neighbor );
-
-				if ( j > i && Math.abs( getHScore(neighbor, _goal) - _hScore.get(_best) ) <= tolerance )
-				{
-					gScoreTemp -= (int) ( ( Math.log(j - i + 1) / Math.log(2) ) * tolerance );
-				}
-			}
+			gScoreTemp = getModifiedScore( _best, neighbor, _goal, gScoreTemp );
 
 			int gScoreOld = _gScore.getOrDefault( neighbor, _gScoreInfinite );
 
@@ -156,8 +143,8 @@ public abstract class AStar<TNode, TGoal>
 		return _best;
 	}
 
-	// gets the user set tolerance amount
-	protected abstract int getSmallerPlanTolerance();
+	// gets the modified score to adjust plan's weight depending on potential tolerance
+	protected abstract int getModifiedScore(@Nonnull TNode best, @Nonnull TNode neighbor, @Nonnull TGoal goal, @Nonnull Integer gScoreTemp);
 
 	// get size of plan
 	protected abstract int getSize( @Nonnull TNode current );

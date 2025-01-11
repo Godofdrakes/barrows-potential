@@ -39,6 +39,36 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	}
 
 	@Override
+	protected int getModifiedScore( @Nonnull RewardPlan best, @Nonnull RewardPlan neighbor, @Nonnull Integer goal, @Nonnull Integer gScoreTemp )
+	{
+		int tolerance = getSmallerPlanTolerance();
+
+		if ( tolerance > 0 )
+		{
+			int i = getSize( best );
+			int j = getSize( neighbor );
+
+			// if the neighbor plan is bigger than the best plan and the reward potential difference
+			// between the two plans is within the set tolerance, adjust the score of the bigger
+			// plan lower. This allows the shorter plan within the tolerance to end up with a higher score.
+			if ( j > i && Math.abs( getHScore( neighbor, goal ) - getHScore( best, goal )) < tolerance )
+			{
+				// using logarithmic scaling for calculating the weighting. Example:
+				// best 874 (size 8), neighbor 876 (size 9). Tolerance 3.
+				// 9-8+6=7. Log base-2 of 7 = 2.8. Cast as int rounded up (3). 3*3=9.
+				// this results in 9 being removed from the gScore for the bigger plan.
+				// change the tolerance to 52 and it sets the plan to just 2 skeleton (822 potential)
+				// which is the next smallest plan with the highest reward.
+				gScoreTemp -= (int) Math.ceil((( Math.log( j - i + tolerance ) / Math.log( 2 )) * tolerance ));
+			}
+		}
+
+		// regular logic runs if tolerance is not set or the
+		// tolerance amounts/size conditions are not met
+		return gScoreTemp;
+	}
+
+	@Override
 	protected int getSize( @Nonnull RewardPlan current )
 	{
 		return current.getSize();
