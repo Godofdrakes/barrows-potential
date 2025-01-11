@@ -24,9 +24,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @PluginDescriptor(
-	name = "Barrows Potential",
-	description = "Highlights optimal NPCs in the Barrows Crypts",
-	tags = {"barrows", "overlay", "pve", "pvm"}
+		name = "Barrows Potential",
+		description = "Highlights optimal NPCs in the Barrows Crypts",
+		tags = {"barrows", "overlay", "pve", "pvm"}
 )
 public class BarrowsPotentialPlugin extends Plugin
 {
@@ -76,14 +76,14 @@ public class BarrowsPotentialPlugin extends Plugin
 		// startUp/shutDown run on the ??? (I'm not actually sure, but it trips isClientThread checks) thread
 
 		npcOverlay
-			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
-			.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null )
-			.connect();
+				.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null )
+				.connect();
 
 		screenOverlay
-			.setIsInCrypt( isInCrypt() )
-			.setVisibility( config.overlayOptimal() )
-			.connect();
+				.setIsInCrypt( isInCrypt() )
+				.setVisibility( config.overlayOptimal() )
+				.connect();
 	}
 
 	@Override
@@ -154,12 +154,12 @@ public class BarrowsPotentialPlugin extends Plugin
 			log.debug( "config changed" );
 
 			npcOverlay
-				.rebuild()
-				.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
-				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
+					.rebuild()
+					.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+					.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null );
 
 			screenOverlay
-				.setVisibility( config.overlayOptimal() );
+					.setVisibility( config.overlayOptimal() );
 
 			queueUpdatePlan();
 		}
@@ -258,6 +258,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 				planner.reset( configPlan, targetPotentialClamped );
 				planner.setTargetMonsters( config.rewardPlan() );
+				planner.setSmallerPlanTolerance( config.smallerPlanTolerance() );
 
 				val plan = planner.search( PLANNER_ITERATIONS_MAX );
 
@@ -323,9 +324,9 @@ public class BarrowsPotentialPlugin extends Plugin
 	private void updateCheck()
 	{
 		Integer version = configManager.getRSProfileConfiguration(
-			BarrowsPotentialConfig.CONFIG_GROUP,
-			BarrowsPotentialConfig.CONFIG_VERSION,
-			int.class );
+				BarrowsPotentialConfig.CONFIG_GROUP,
+				BarrowsPotentialConfig.CONFIG_VERSION,
+				int.class );
 
 		if ( version == null )
 		{
@@ -347,19 +348,19 @@ public class BarrowsPotentialPlugin extends Plugin
 		final String message = "Barrows Potential has been updated. See Github page for details.";
 
 		final String chatMessage = new ChatMessageBuilder()
-			.append( ChatColorType.HIGHLIGHT )
-			.append( message )
-			.build();
+				.append( ChatColorType.HIGHLIGHT )
+				.append( message )
+				.build();
 
 		chatMessageManager.queue( QueuedMessage.builder()
-			.type( ChatMessageType.CONSOLE )
-			.runeLiteFormattedMessage( chatMessage )
-			.build() );
+				.type( ChatMessageType.CONSOLE )
+				.runeLiteFormattedMessage( chatMessage )
+				.build() );
 
 		configManager.setRSProfileConfiguration(
-			BarrowsPotentialConfig.CONFIG_GROUP,
-			BarrowsPotentialConfig.CONFIG_VERSION,
-			PLUGIN_VERSION );
+				BarrowsPotentialConfig.CONFIG_GROUP,
+				BarrowsPotentialConfig.CONFIG_VERSION,
+				PLUGIN_VERSION );
 	}
 
 	@Provides

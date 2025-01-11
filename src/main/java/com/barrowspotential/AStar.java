@@ -42,8 +42,8 @@ public abstract class AStar<TNode, TGoal>
 	private TNode _best;
 
 	protected AStar(
-		int gScoreInfinite,
-		@Nonnull Comparator<Integer> comparator )
+			int gScoreInfinite,
+			@Nonnull Comparator<Integer> comparator )
 	{
 		_gScoreInfinite = gScoreInfinite;
 		_comparator = comparator;
@@ -66,8 +66,8 @@ public abstract class AStar<TNode, TGoal>
 	}
 
 	public final void reset(
-		@Nonnull TNode start,
-		@Nonnull TGoal goal )
+			@Nonnull TNode start,
+			@Nonnull TGoal goal )
 	{
 		_openSet.clear();
 		_gScore.clear();
@@ -104,7 +104,7 @@ public abstract class AStar<TNode, TGoal>
 			return current;
 		}
 
-		if ( _comparator.compare( _hScore.get( _best ), _hScore.get( current ) ) > 0 )
+		if ( _comparator.compare( _fScore.get( _best ), _fScore.get( current ) ) > 0 )
 		{
 			// This isn't part of the basic A* setup
 			// We want to support partial plans here since we don't _need_ a perfect match, we just prefer it
@@ -115,6 +115,9 @@ public abstract class AStar<TNode, TGoal>
 		for ( final TNode neighbor : getNeighbors( current, _goal ) )
 		{
 			int gScoreTemp = _gScore.get( current ) + getDScore( current, neighbor );
+
+			gScoreTemp = getModifiedScore( _best, neighbor, _goal, gScoreTemp );
+
 			int gScoreOld = _gScore.getOrDefault( neighbor, _gScoreInfinite );
 
 			if ( _comparator.compare( gScoreTemp, gScoreOld ) >= 0 )
@@ -139,6 +142,12 @@ public abstract class AStar<TNode, TGoal>
 	{
 		return _best;
 	}
+
+	// gets the modified score to adjust plan's weight depending on potential tolerance
+	protected abstract int getModifiedScore(@Nonnull TNode best, @Nonnull TNode neighbor, @Nonnull TGoal goal, @Nonnull Integer gScoreTemp);
+
+	// get size of plan
+	protected abstract int getSize( @Nonnull TNode current );
 
 	// estimated cost to reach goal from current
 	protected abstract int getHScore( @Nonnull TNode current, @Nonnull TGoal goal );

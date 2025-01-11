@@ -1,6 +1,8 @@
 package com.barrowspotential;
 
 import com.google.common.collect.ImmutableSet;
+import lombok.Getter;
+import lombok.Setter;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 
@@ -20,6 +22,10 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	@Nonnull
 	private Set<Monster> targetMonsters = ImmutableSet.of();
 
+	@Getter
+	@Setter
+	private int smallerPlanTolerance = 0;
+
 	@Inject
 	public RewardPlanner()
 	{
@@ -30,6 +36,42 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 	public void setTargetMonsters( @Nonnull Set<Monster> monsters )
 	{
 		targetMonsters = ImmutableSet.copyOf( monsters );
+	}
+
+	@Override
+	protected int getModifiedScore( @Nonnull RewardPlan best, @Nonnull RewardPlan neighbor, @Nonnull Integer goal, @Nonnull Integer gScoreTemp )
+	{
+		int tolerance = getSmallerPlanTolerance();
+
+		if ( tolerance > 0 )
+		{
+			int i = getSize( best );
+			int j = getSize( neighbor );
+
+			// if the neighbor plan is bigger than the best plan and the reward potential difference
+			// between the two plans is within the set tolerance, adjust the score of the bigger
+			// plan lower. This allows the shorter plan within the tolerance to end up with a higher score.
+			if ( j > i && Math.abs( getHScore( neighbor, goal ) - getHScore( best, goal )) < tolerance )
+			{
+				// using logarithmic scaling for calculating the weighting. Example:
+				// best 874 (size 8), neighbor 876 (size 9). Tolerance 3.
+				// 9-8+3=4. Log(4) = 1.3, Log(1.5) = 0.4 1.3/0.4 = 3.4. 3.4*3=10.2 rounded up.
+				// this results in 11 being removed from the gScore for the bigger plan.
+				// change the tolerance to 53 and it sets the plan to just 2 skeleton (822 potential)
+				// which is the next smallest plan with the highest reward.
+				gScoreTemp -= (int) Math.ceil((( Math.log( j - i + tolerance ) / Math.log( 1.5 )) * tolerance ));
+			}
+		}
+
+		// regular logic runs if tolerance is not set or the
+		// tolerance amounts/size conditions are not met
+		return gScoreTemp;
+	}
+
+	@Override
+	protected int getSize( @Nonnull RewardPlan current )
+	{
+		return current.getSize();
 	}
 
 	@Override

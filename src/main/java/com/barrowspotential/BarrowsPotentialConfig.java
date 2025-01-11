@@ -14,79 +14,90 @@ public interface BarrowsPotentialConfig extends Config
 	String CONFIG_VERSION = "version";
 
 	@ConfigSection(
-		name = "Planner",
-		description = "",
-		position = 0
+			name = "Planner",
+			description = "",
+			position = 0
 	)
 	String plannerSection = "plannerSection";
 
 	@ConfigSection(
-		name = "Highlight",
-		description = "",
-		position = 1
+			name = "Highlight",
+			description = "",
+			position = 1
 	)
 	String highlightSection = "highlightSection";
 
 	@ConfigItem(
-		keyName = "rewardTarget",
-		name = "Reward Target",
-		description = "",
-		section = plannerSection,
-		position = 0
+			keyName = "rewardTarget",
+			name = "Reward Target",
+			description = "",
+			section = plannerSection,
+			position = 0
 	)
 	default RewardTarget rewardTarget() { return RewardTarget.BloodRune; }
 
 	@ConfigItem(
-		keyName = "rewardPlan",
-		name = "Reward Plan",
-		description = "Which monsters do you plan on defeating? Ctrl+Click to select.",
-		section = plannerSection,
-		position = 1
+			keyName = "rewardPlan",
+			name = "Reward Plan",
+			description = "Which monsters do you plan on defeating? Ctrl+Click to select.",
+			section = plannerSection,
+			position = 1
 	)
 	default Set<Monster> rewardPlan() { return EnumSet.allOf( Monster.class ); }
 
 	@ConfigItem(
-		keyName = "highlightNpcs",
-		name = "Highlight NPCs",
-		description = "Highlight any NPC that would not exceed the target score",
-		section = highlightSection,
-		position = 0
+			keyName = "smallerPlanTolerance",
+			name = "Smaller Plan Tolerance",
+			description = "If this is greater than 0, the plan will prioritise smaller plans which have a reward potential that's " +
+					"within this tolerance. Allows for 2x bloodworm 1x skeleton tracking at 6 tolerance for example. Tolerance is " +
+					"calculated from the reward target.",
+			section = plannerSection,
+			position = 2
+	)
+	default int smallerPlanTolerance() { return 0; }
+
+	@ConfigItem(
+			keyName = "highlightNpcs",
+			name = "Highlight NPCs",
+			description = "Highlight any NPC that would not exceed the target score",
+			section = highlightSection,
+			position = 0
 	)
 	default boolean highlightNpc() { return true; }
 
 	@ConfigItem(
-		keyName = "highlightColor",
-		name = "Highlight Color",
-		description = "",
-		section = highlightSection,
-		position = 1
+			keyName = "highlightColor",
+			name = "Highlight Color",
+			description = "",
+			section = highlightSection,
+			position = 1
 	)
 	default Color highlightColor() { return Color.gray; }
 
 	@ConfigItem(
-		keyName = "highlightOptimal",
-		name = "Highlight Optimal NPCs",
-		description = "Highlight the NPCs that would best reach the target score",
-		section = highlightSection,
-		position = 2
+			keyName = "highlightOptimal",
+			name = "Highlight Optimal NPCs",
+			description = "Highlight the NPCs that would best reach the target score",
+			section = highlightSection,
+			position = 2
 	)
 	default boolean highlightOptimal() { return true; }
 
 	@ConfigItem(
-		keyName = "overlayOptimal",
-		name = "Overlay Optimal NPCs",
-		description = "List optimal NPCs in an overlay",
-		section = highlightSection,
-		position = 3
+			keyName = "overlayOptimal",
+			name = "Overlay Optimal NPCs",
+			description = "List optimal NPCs in an overlay",
+			section = highlightSection,
+			position = 3
 	)
 	default boolean overlayOptimal() { return true; }
 
 	@ConfigItem(
-		keyName = "optimalColor",
-		name = "Optimal Color",
-		description = "",
-		section = highlightSection,
-		position = 4
+			keyName = "optimalColor",
+			name = "Optimal Color",
+			description = "",
+			section = highlightSection,
+			position = 4
 	)
 	default Color optimalColor() { return Color.white; }
 }

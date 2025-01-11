@@ -28,9 +28,9 @@ public final class BarrowsPotentialOverlay extends Overlay
 	private final PanelComponent panelComponent = new PanelComponent();
 
 	private final TitleComponent titleComponent = TitleComponent.builder()
-		.text( "Barrows Potential" )
-		.color( Color.white )
-		.build();
+			.text( "Barrows Potential" )
+			.color( Color.white )
+			.build();
 
 	private final AtomicBoolean isVisible = new AtomicBoolean( false );
 	private final AtomicBoolean isInCrypt = new AtomicBoolean( false );
@@ -81,8 +81,8 @@ public final class BarrowsPotentialOverlay extends Overlay
 	}
 
 	public BarrowsPotentialOverlay setRewardDisplay(
-		@Nonnegative int rewardPotential,
-		@NonNull RewardTarget rewardTarget )
+			@Nonnegative int rewardPotential,
+			@NonNull RewardTarget rewardTarget )
 	{
 		val component = new ProgressBarComponent();
 
@@ -153,9 +153,9 @@ public final class BarrowsPotentialOverlay extends Overlay
 			}
 
 			panelComponent.getChildren().add( LineComponent.builder()
-				.left( String.format( "x%d:", entry.getValue() ) )
-				.right( entry.getKey().getDisplayName() )
-				.build() );
+					.left( String.format( "x%d:", entry.getValue() ) )
+					.right( entry.getKey().getDisplayName() )
+					.build() );
 		}
 
 		return panelComponent.render( graphics );
