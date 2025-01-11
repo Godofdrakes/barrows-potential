@@ -55,11 +55,11 @@ public final class RewardPlanner extends AStar<RewardPlan, Integer>
 			{
 				// using logarithmic scaling for calculating the weighting. Example:
 				// best 874 (size 8), neighbor 876 (size 9). Tolerance 3.
-				// 9-8+6=7. Log base-2 of 7 = 2.8. Cast as int rounded up (3). 3*3=9.
-				// this results in 9 being removed from the gScore for the bigger plan.
-				// change the tolerance to 52 and it sets the plan to just 2 skeleton (822 potential)
+				// 9-8+3=4. Log(4) = 1.3, Log(1.5) = 0.4 1.3/0.4 = 3.4. 3.4*3=10.2 rounded up.
+				// this results in 11 being removed from the gScore for the bigger plan.
+				// change the tolerance to 53 and it sets the plan to just 2 skeleton (822 potential)
 				// which is the next smallest plan with the highest reward.
-				gScoreTemp -= (int) Math.ceil((( Math.log( j - i + tolerance ) / Math.log( 2 )) * tolerance ));
+				gScoreTemp -= (int) Math.ceil((( Math.log( j - i + tolerance ) / Math.log( 1.5 )) * tolerance ));
 			}
 		}
 

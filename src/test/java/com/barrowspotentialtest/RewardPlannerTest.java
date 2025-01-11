@@ -15,7 +15,7 @@ public class RewardPlannerTest extends TestCase
 {
 	private static final int maxIterations = 20;
 
-	private static final int planTolerance = 6;
+	private static final int planTolerance = 3;
 
 	private final Logger logger = LoggerFactory.getLogger( RewardPlannerTest.class );
 
