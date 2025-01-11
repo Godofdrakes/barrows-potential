@@ -23,8 +23,6 @@ If all you want to do is follow a known plan deselect all crypt monsters you don
 
 If you are targeting **only** Ahrim or Karil the plugin will create a plan with a score of 865 (Giant crypt spider x9, Crypt spider x1) despite a plan of 880 being possible (Giant crypt spider x7, Crypt spider x1, Giant crypt rat x1, Crypt rat x1, Bloodworm x1). This is due to the plugin requiring 64 iterations to reach the optimal plan but it is limited to 20 for performance reasons. If this is a concern you should start by killing Giant crypt spiders. Once you kill enough the plugin will correct iteself.
 
-If you are trying to follow the "Skeleton x2, Bloodworm x1" plan and deselect all crypt monsters except Skeletons and Bloodworms the planner will generate a plan of "Bloodworm x4". This is because "Bloodworm x4" is worth 876 while "Skeleton x2, Bloodworm x1" is worth 874, making the former more "optimal". There are likely other similar cases. If you are following a specific plan you should disable both "optimal" config options. This will disable the planner and just highlight the monsters you want until the goal is met.
-
 ## How It Works
 
 The plugin uses an implementation of the A* algorithm to search for a plan that maximizes reward potential. Each iteration of the search will select the plan that is nearest to the reward target and then generate new plans that attempt to get even closer while not going past the upper bounds of the reward target. When you kill a brother or NPC in the crypt the planner is run for 20 iterations. If an optimal plan cannot be found after that the plugin takes the best sub-opimtal plan the planner could find.
@@ -51,3 +49,8 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 * Rewrote overlay and highlight implementation
   * Fixed case where overlay/highlight could be visible while the plugin was disabled
   * Overlay label now matches plugin name so people know who's to blame if it breaks (me)
+
+### Version 5
+
+* Now suggests the traditional "Skeleton x2, Bloodworm x1" plan instead of "Bloodworm x4"
+  * Thanks to @Tybo24
