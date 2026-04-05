@@ -54,3 +54,7 @@ The plugin uses an implementation of the A* algorithm to search for a plan that 
 
 * Now suggests the traditional "Skeleton x2, Bloodworm x1" plan instead of "Bloodworm x4"
   * Thanks to @Tybo24
+
+### Version 6
+
+* Fixed case where RuntimeException would be thrown on startup

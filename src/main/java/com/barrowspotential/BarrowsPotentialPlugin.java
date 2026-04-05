@@ -37,7 +37,7 @@ public class BarrowsPotentialPlugin extends Plugin
 
 	private static final int REWARD_POTENTIAL_MAX = 1012;
 
-	private static final int PLUGIN_VERSION = 5;
+	private static final int PLUGIN_VERSION = 6;
 	private static final int PLUGIN_VERSION_RELEASE = 1;
 
 	@Inject
@@ -74,17 +74,24 @@ public class BarrowsPotentialPlugin extends Plugin
 	@Override
 	protected void startUp()
 	{
-		// startUp/shutDown run on the ??? (I'm not actually sure, but it trips isClientThread checks) thread
-
+		// startUp/shutDown run on the ??? thread.
+		// I'm not actually sure, but it trips isClientThread checks.
+		
 		npcOverlay
-				.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
-				.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null )
-				.connect();
-
+			.setHighlightColor( config.highlightNpc() ? config.highlightColor() : null )
+			.setHighlightOptimalColor( config.highlightOptimal() ? config.optimalColor() : null )
+			.connect();
+		
 		screenOverlay
-				.setIsInCrypt( isInCrypt() )
-				.setVisibility( config.overlayOptimal() )
-				.connect();
+			// Default to false, we'll figure this out in a moment
+			.setIsInCrypt( false )
+			.setVisibility( config.overlayOptimal() )
+			.connect();
+		
+		clientThread.invokeLater( () ->
+		{
+			screenOverlay.setIsInCrypt( isInCrypt() );
+		});
 	}
 
 	@Override
